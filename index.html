@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sky Color Forecast — when to step outside</title>
+<meta name="description" content="Predicts the most colorful sunrises and sunsets near you using cloud, humidity, and visibility data from Open-Meteo." />
+<style>
+  :root{
+    --bg-top:#0b1026;
+    --bg-mid:#1a1340;
+    --bg-bot:#3a1d52;
+    --ink:#f6f1e6;
+    --muted:#bbb1c9;
+    --card:rgba(255,255,255,0.06);
+    --card-border:rgba(255,255,255,0.12);
+    --accent:#ffb86b;
+    --accent-2:#ff7a90;
+    --good:#7ce6a8;
+    --ok:#ffd277;
+    --meh:#ff9a76;
+    --bad:#9aa0b3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;min-height:100%}
+  body{
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 70% -10%, #ff7a90 0%, transparent 60%),
+      radial-gradient(1000px 500px at 10% 10%, #ffb86b 0%, transparent 55%),
+      linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 45%, var(--bg-bot) 100%);
+    background-attachment: fixed;
+    min-height:100vh;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:28px 18px 64px}
+  header h1{font-size:clamp(26px,4vw,42px);margin:0 0 6px;letter-spacing:-0.02em}
+  header p.sub{margin:0;color:var(--muted);font-size:15px;line-height:1.5}
+  .controls{
+    margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:12px;
+    backdrop-filter: blur(8px);
+  }
+  .controls input[type=text]{
+    flex:1 1 220px;min-width:180px;padding:10px 12px;border-radius:10px;border:1px solid var(--card-border);
+    background:rgba(0,0,0,0.25);color:var(--ink);font-size:15px;outline:none;
+  }
+  .controls input[type=text]::placeholder{color:#9a93a8}
+  .controls button{
+    appearance:none;border:1px solid var(--card-border);background:rgba(255,255,255,0.08);
+    color:var(--ink);padding:10px 14px;border-radius:10px;font-size:14px;cursor:pointer;
+    transition:transform .05s ease, background .15s ease;
+  }
+  .controls button:hover{background:rgba(255,255,255,0.14)}
+  .controls button:active{transform:translateY(1px)}
+  .controls button.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#1c0f1f;font-weight:600}
+  .status{margin-top:10px;font-size:13px;color:var(--muted);min-height:18px}
+  .place{margin-top:18px;font-size:14px;color:var(--muted)}
+  .place strong{color:var(--ink);font-weight:600}
+
+  .top-pick{
+    margin-top:18px;border-radius:18px;padding:18px;border:1px solid var(--card-border);
+    background:linear-gradient(135deg, rgba(255,184,107,0.18), rgba(255,122,144,0.18));
+  }
+  .top-pick .label{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#ffd9b8}
+  .top-pick .when{font-size:clamp(20px,3vw,28px);margin:6px 0 0;font-weight:600}
+  .top-pick .score-row{display:flex;align-items:baseline;gap:14px;margin-top:6px;flex-wrap:wrap}
+  .top-pick .score-row .big{font-size:48px;font-weight:700;line-height:1}
+  .top-pick .score-row .quality{font-size:18px;color:var(--ink);opacity:0.92}
+  .top-pick .range{margin-top:6px;color:#f4e3d2;font-size:14px}
+
+  .grid{margin-top:22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  .card{
+    background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:14px;
+    backdrop-filter: blur(8px);
+  }
+  .card h3{margin:0;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;color:#cfc3da}
+  .card .day{margin-top:2px;font-size:13px;color:var(--muted)}
+  .event{display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px;gap:10px}
+  .event .time{font-size:22px;font-weight:600}
+  .event .score{
+    font-size:22px;font-weight:700;padding:4px 10px;border-radius:10px;
+    background:rgba(255,255,255,0.08);border:1px solid var(--card-border);
+  }
+  .quality-tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;margin-top:6px}
+  .q-spec{background:rgba(124,230,168,0.18);color:#bcf2d3}
+  .q-vib {background:rgba(255,210,119,0.20);color:#ffe4ae}
+  .q-ple {background:rgba(255,184,107,0.20);color:#ffd0a3}
+  .q-med {background:rgba(255,154,118,0.22);color:#ffc1a8}
+  .q-drab{background:rgba(154,160,179,0.25);color:#dde0ea}
+  .meta{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5}
+  .meta b{color:#e9def4;font-weight:600}
+  .bar{height:6px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;margin-top:10px}
+  .bar > span{display:block;height:100%;background:linear-gradient(90deg,#9aa0b3,#ffb86b,#ff7a90);}
+
+  details.science{margin-top:24px;background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:14px}
+  details.science summary{cursor:pointer;font-weight:600}
+  details.science p{color:var(--muted);font-size:14px;line-height:1.6}
+  details.science code{background:rgba(0,0,0,0.3);padding:1px 6px;border-radius:6px;font-size:12px}
+
+  footer{margin-top:28px;color:var(--muted);font-size:12px;text-align:center;line-height:1.6}
+  footer a{color:#ffd9b8}
+
+  .suggestions{
+    position:relative;
+  }
+  .suggest-list{
+    position:absolute;left:0;right:0;top:calc(100% + 6px);
+    background:#1a1340;border:1px solid var(--card-border);border-radius:10px;
+    list-style:none;padding:6px;margin:0;z-index:10;max-height:240px;overflow:auto;
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  }
+  .suggest-list li{padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px}
+  .suggest-list li:hover, .suggest-list li[aria-selected="true"]{background:rgba(255,255,255,0.08)}
+  .hide{display:none}
+  .err{color:#ffb1b1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Sky Color Forecast</h1>
+    <p class="sub">Predicts how colorful the next several sunrises and sunsets will be at your location, using cloud cover, humidity, and visibility from Open‑Meteo. No accounts, no API keys, fully free.</p>
+  </header>
+
+  <div class="controls">
+    <div class="suggestions" style="flex:1 1 240px;position:relative;">
+      <input id="cityInput" type="text" placeholder="Type a city (e.g., Reykjavík, Tokyo, Boise)…" autocomplete="off" />
+      <ul id="suggestList" class="suggest-list hide" role="listbox"></ul>
+    </div>
+    <button id="searchBtn">Search</button>
+    <button id="geoBtn" class="primary">📍 Use my location</button>
+  </div>
+
+  <div id="status" class="status"></div>
+  <div id="place" class="place"></div>
+
+  <section id="topPick" class="top-pick hide">
+    <div class="label">Best window in the next 5 days</div>
+    <div class="when" id="topWhen"></div>
+    <div class="score-row">
+      <div class="big" id="topScore"></div>
+      <div class="quality" id="topQuality"></div>
+    </div>
+    <div class="range" id="topRange"></div>
+  </section>
+
+  <section id="grid" class="grid"></section>
+
+  <details class="science">
+    <summary>How the score is calculated</summary>
+    <p>
+      Vivid sunrises and sunsets need a <b>canvas</b> of high (cirrus) and mid‑level (altocumulus / altostratus) clouds for the low‑angle sunlight to bounce off, but a <b>clear horizon</b> in the direction of the sun so the light can actually reach those clouds. Low clouds near the observer block the show.
+    </p>
+    <p>
+      For each sunrise/sunset, we pull the hourly forecast from Open‑Meteo (no API key) and combine these signals into a 0–100 score:
+    </p>
+    <p>
+      • <b>Mid‑level cloud cover</b> (weight 30%) — best around 30–60%.<br/>
+      • <b>High cloud cover</b> (weight 25%) — best around 30–70%.<br/>
+      • <b>Low cloud cover</b> (weight 20%) — penalty above ~30%, the lower the better.<br/>
+      • <b>Humidity</b> at surface (weight 15%) — lower humidity = cleaner colors.<br/>
+      • <b>Visibility</b> (weight 10%) — higher = more vivid.
+    </p>
+    <p>
+      Sunrise/sunset times come straight from Open‑Meteo's daily astronomy fields, which are computed from the standard NOAA solar position algorithm — so the timing itself is astronomical and accurate to the minute. The "best window" is roughly sunset − 25 min through sunset + 25 min (and the symmetric span around sunrise) — that covers golden hour through early blue hour.
+    </p>
+    <p>Data: <code>api.open-meteo.com</code> for weather, <code>geocoding-api.open-meteo.com</code> for city search. Both are free and CORS‑enabled.</p>
+  </details>
+
+  <footer>
+    Built as a single static HTML file — host it free on GitHub Pages, Netlify, or Cloudflare Pages.<br/>
+    Weather &amp; astronomy: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. No tracking, no cookies.
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+// --- Scoring ---------------------------------------------------------------
+
+// Bell curve helper. Returns 0..100 with peak at `peak`, std `sigma`.
+function bell(value, peak, sigma) {
+  const d = value - peak;
+  return 100 * Math.exp(-(d * d) / (2 * sigma * sigma));
+}
+
+function lowCloudScore(low) {
+  // Best: 0%. Penalty grows past ~25%, near-zero by 70%.
+  if (low <= 20) return 100;
+  if (low <= 50) return 100 - ((low - 20) / 30) * 70; // 100 -> 30
+  if (low <= 100) return Math.max(0, 30 - ((low - 50) / 50) * 30); // 30 -> 0
+  return 0;
+}
+
+function midCloudScore(mid) {
+  // Bell centered at 45%, sigma 25.
+  return bell(mid, 45, 25);
+}
+
+function highCloudScore(high) {
+  // Bell centered at 50%, sigma 30 (slightly more forgiving).
+  return bell(high, 50, 30);
+}
+
+function humidityScore(rh) {
+  if (rh <= 40) return 100;
+  if (rh <= 80) return 100 - ((rh - 40) / 40) * 60; // 100 -> 40
+  return Math.max(0, 40 - ((rh - 80) / 20) * 40);   // 40 -> 0
+}
+
+function visibilityScore(visMeters) {
+  const km = visMeters / 1000;
+  if (km <= 5)  return (km / 5) * 30;            // 0 -> 30
+  if (km <= 15) return 30 + ((km - 5) / 10) * 50; // 30 -> 80
+  if (km <= 24) return 80 + ((km - 15) / 9) * 20; // 80 -> 100
+  return 100;
+}
+
+function combinedScore(parts) {
+  const w = { mid: 0.30, high: 0.25, low: 0.20, hum: 0.15, vis: 0.10 };
+  return Math.round(
+    parts.mid  * w.mid  +
+    parts.high * w.high +
+    parts.low  * w.low  +
+    parts.hum  * w.hum  +
+    parts.vis  * w.vis
+  );
+}
+
+function qualityLabel(score){
+  if (score >= 80) return { tag: "Spectacular", cls: "q-spec" };
+  if (score >= 65) return { tag: "Vibrant",     cls: "q-vib"  };
+  if (score >= 50) return { tag: "Pleasant",    cls: "q-ple"  };
+  if (score >= 35) return { tag: "Mediocre",    cls: "q-med"  };
+  return            { tag: "Drab",        cls: "q-drab" };
+}
+
+// --- Time helpers ----------------------------------------------------------
+
+// Open-Meteo returns local-time ISO strings like "2026-04-23T19:42" (no zone).
+// We treat them as the location's local clock time; we don't need to convert
+// to UTC because we only use them for display and for matching the hourly
+// arrays which are also in the same local time.
+function parseLocalISO(s) {
+  // Parse as if local; we just need a Date for formatting & arithmetic.
+  return new Date(s);
+}
+
+function formatTime(date) {
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function formatDay(date) {
+  return date.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+function shortDay(date) {
+  return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+// Return the index in `hourlyTimes` (array of "YYYY-MM-DDTHH:00" strings)
+// nearest to `targetISO`. Falls back to -1 if not found.
+function nearestHourIndex(hourlyTimes, targetISO) {
+  const targetMs = parseLocalISO(targetISO).getTime();
+  let bestIdx = -1, bestDiff = Infinity;
+  for (let i = 0; i < hourlyTimes.length; i++) {
+    const diff = Math.abs(parseLocalISO(hourlyTimes[i]).getTime() - targetMs);
+    if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+  }
+  return bestIdx;
+}
+
+// --- Data fetching ---------------------------------------------------------
+
+async function geocode(query) {
+  const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
+  url.searchParams.set("name", query);
+  url.searchParams.set("count", "6");
+  url.searchParams.set("language", "en");
+  url.searchParams.set("format", "json");
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Geocoding failed: " + res.status);
+  const data = await res.json();
+  return data.results || [];
+}
+
+async function reverseGeocode(lat, lon) {
+  // Open-Meteo doesn't have reverse geocoding, but we can label coordinates.
+  return { name: `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`, country: "" };
+}
+
+async function fetchForecast(lat, lon) {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude",  String(lat));
+  url.searchParams.set("longitude", String(lon));
+  url.searchParams.set("hourly",
+    "cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,visibility");
+  url.searchParams.set("daily", "sunrise,sunset");
+  url.searchParams.set("timezone", "auto");
+  url.searchParams.set("forecast_days", "5");
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Forecast failed: " + res.status);
+  return res.json();
+}
+
+// --- Build prediction objects ---------------------------------------------
+
+function buildPredictions(forecast) {
+  const ht = forecast.hourly.time;
+  const lo = forecast.hourly.cloud_cover_low;
+  const md = forecast.hourly.cloud_cover_mid;
+  const hi = forecast.hourly.cloud_cover_high;
+  const rh = forecast.hourly.relative_humidity_2m;
+  const vi = forecast.hourly.visibility;
+
+  const out = [];
+  const sr = forecast.daily.sunrise;
+  const ss = forecast.daily.sunset;
+  for (let i = 0; i < sr.length; i++) {
+    out.push(makeEvent("sunrise", sr[i], ht, lo, md, hi, rh, vi));
+    out.push(makeEvent("sunset",  ss[i], ht, lo, md, hi, rh, vi));
+  }
+  return out;
+}
+
+function makeEvent(kind, iso, ht, lo, md, hi, rh, vi) {
+  const idx = nearestHourIndex(ht, iso);
+  const safe = (a) => (idx >= 0 && a && a[idx] != null ? a[idx] : null);
+  const lowV = safe(lo), midV = safe(md), highV = safe(hi);
+  const rhV = safe(rh), visV = safe(vi);
+  const parts = {
+    low:  lowCloudScore(lowV ?? 0),
+    mid:  midCloudScore(midV ?? 0),
+    high: highCloudScore(highV ?? 0),
+    hum:  humidityScore(rhV ?? 50),
+    vis:  visibilityScore(visV ?? 15000),
+  };
+  const score = combinedScore(parts);
+  const dt = parseLocalISO(iso);
+  return {
+    kind, iso, date: dt, score, parts,
+    raw: { low: lowV, mid: midV, high: highV, rh: rhV, vis: visV },
+  };
+}
+
+function eventWindow(dt) {
+  const a = new Date(dt.getTime() - 25 * 60 * 1000);
+  const b = new Date(dt.getTime() + 25 * 60 * 1000);
+  return `${formatTime(a)} – ${formatTime(b)}`;
+}
+
+// --- Rendering -------------------------------------------------------------
+
+const $ = (id) => document.getElementById(id);
+
+function setStatus(msg, isErr=false) {
+  const el = $("status");
+  el.textContent = msg || "";
+  el.className = "status" + (isErr ? " err" : "");
+}
+
+function renderPlace(label) {
+  $("place").innerHTML = label ? `Forecast for <strong>${label}</strong>` : "";
+}
+
+function renderTopPick(events) {
+  // Only consider events from "now" onward (allow next 30 minutes of past).
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  const future = events.filter(e => e.date.getTime() >= cutoff);
+  if (future.length === 0) {
+    $("topPick").classList.add("hide");
+    return;
+  }
+  const best = future.reduce((a, b) => (b.score > a.score ? b : a));
+  const q = qualityLabel(best.score);
+  $("topWhen").textContent = `${best.kind === "sunset" ? "🌇 Sunset" : "🌅 Sunrise"} • ${formatDay(best.date)}`;
+  $("topScore").textContent = best.score;
+  $("topQuality").textContent = q.tag.toLowerCase();
+  $("topRange").textContent = `Step outside between ${eventWindow(best.date)} (peak at ${formatTime(best.date)}).`;
+  $("topPick").classList.remove("hide");
+}
+
+function renderGrid(events) {
+  const grid = $("grid");
+  grid.innerHTML = "";
+
+  // Group by date string.
+  const byDay = new Map();
+  for (const e of events) {
+    const key = e.date.toDateString();
+    if (!byDay.has(key)) byDay.set(key, []);
+    byDay.get(key).push(e);
+  }
+
+  for (const [, dayEvents] of byDay) {
+    const card = document.createElement("div");
+    card.className = "card";
+    const dayLabel = shortDay(dayEvents[0].date);
+    card.innerHTML = `
+      <h3>${dayLabel}</h3>
+      <div class="day">Sunrise &amp; sunset color forecast</div>
+    `;
+    for (const e of dayEvents) {
+      const q = qualityLabel(e.score);
+      const icon = e.kind === "sunset" ? "🌇" : "🌅";
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <div class="event">
+          <div>
+            <div class="time">${icon} ${formatTime(e.date)}</div>
+            <span class="quality-tag ${q.cls}">${q.tag}</span>
+          </div>
+          <div class="score" title="0–100 sky color score">${e.score}</div>
+        </div>
+        <div class="bar"><span style="width:${e.score}%"></span></div>
+        <div class="meta">
+          <b>Window:</b> ${eventWindow(e.date)}<br/>
+          <b>Clouds:</b> low ${fmtPct(e.raw.low)} · mid ${fmtPct(e.raw.mid)} · high ${fmtPct(e.raw.high)}<br/>
+          <b>Humidity:</b> ${fmtPct(e.raw.rh)} · <b>Visibility:</b> ${fmtKm(e.raw.vis)}
+        </div>
+      `;
+      card.appendChild(div);
+    }
+    grid.appendChild(card);
+  }
+}
+
+function fmtPct(v) { return v == null ? "–" : `${Math.round(v)}%`; }
+function fmtKm(m)  { return m == null ? "–" : `${(m/1000).toFixed(1)} km`; }
+
+// --- Flow ------------------------------------------------------------------
+
+async function runForCoords(lat, lon, label) {
+  try {
+    setStatus("Fetching forecast…");
+    renderPlace(label);
+    const fc = await fetchForecast(lat, lon);
+    const events = buildPredictions(fc);
+    renderTopPick(events);
+    renderGrid(events);
+    setStatus("");
+  } catch (e) {
+    console.error(e);
+    setStatus("Couldn't load forecast. " + e.message, true);
+  }
+}
+
+// Geolocation
+$("geoBtn").addEventListener("click", () => {
+  if (!navigator.geolocation) {
+    setStatus("Geolocation is not available in this browser.", true);
+    return;
+  }
+  setStatus("Asking your browser for location…");
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude, longitude } = pos.coords;
+      runForCoords(latitude, longitude, `your location (${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°)`);
+    },
+    (err) => {
+      setStatus("Location denied or unavailable. Try searching for a city instead.", true);
+    },
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
+  );
+});
+
+// Search
+const cityInput = $("cityInput");
+const suggest   = $("suggestList");
+let suggestTimer = 0;
+let lastResults  = [];
+
+cityInput.addEventListener("input", () => {
+  const q = cityInput.value.trim();
+  clearTimeout(suggestTimer);
+  if (q.length < 2) { suggest.classList.add("hide"); return; }
+  suggestTimer = setTimeout(async () => {
+    try {
+      const results = await geocode(q);
+      lastResults = results;
+      if (!results.length) {
+        suggest.classList.add("hide"); return;
+      }
+      suggest.innerHTML = "";
+      for (const r of results) {
+        const li = document.createElement("li");
+        li.textContent = [r.name, r.admin1, r.country].filter(Boolean).join(", ");
+        li.addEventListener("click", () => {
+          cityInput.value = li.textContent;
+          suggest.classList.add("hide");
+          runForCoords(r.latitude, r.longitude, li.textContent);
+        });
+        suggest.appendChild(li);
+      }
+      suggest.classList.remove("hide");
+    } catch (e) {
+      suggest.classList.add("hide");
+    }
+  }, 220);
+});
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".suggestions")) suggest.classList.add("hide");
+});
+
+$("searchBtn").addEventListener("click", async () => {
+  const q = cityInput.value.trim();
+  if (!q) { setStatus("Type a city or use your location.", true); return; }
+  try {
+    setStatus("Looking up city…");
+    const results = await geocode(q);
+    if (!results.length) { setStatus("No matches for " + q, true); return; }
+    const r = results[0];
+    const label = [r.name, r.admin1, r.country].filter(Boolean).join(", ");
+    cityInput.value = label;
+    runForCoords(r.latitude, r.longitude, label);
+  } catch (e) {
+    setStatus("Search failed: " + e.message, true);
+  }
+});
+
+cityInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); $("searchBtn").click(); }
+});
+
+// First-load nudge
+setStatus('Tap "Use my location" or search a city to get started.');
+</script>
+</body>
+</html>
