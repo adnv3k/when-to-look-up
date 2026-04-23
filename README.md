@@ -4,7 +4,7 @@
 
 A single-file web app that scores upcoming sunrises and sunsets on a 0–100 scale based on the atmospheric conditions that actually produce vivid sky color — cloud layering, humidity, and visibility. No account, no API key, no build step.
 
-**[Live demo →](https://your-username.github.io/when-to-look-up/)** *(update after deploy)*
+**[Live demo](https://whentolookup.com)** 
 
 ---
 
