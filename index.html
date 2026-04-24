@@ -33,6 +33,7 @@
     background-attachment: fixed;
     min-height:100vh;
   }
+  [dir="rtl"] .wrap{direction:rtl}
   .wrap{max-width:980px;margin:0 auto;padding:28px 18px 64px}
   header h1{font-size:clamp(26px,4vw,42px);margin:0 0 6px;letter-spacing:-0.02em}
   header p.sub{margin:0;color:var(--muted);font-size:15px;line-height:1.5}
@@ -46,14 +47,17 @@
     background:rgba(0,0,0,0.25);color:var(--ink);font-size:15px;outline:none;
   }
   .controls input[type=text]::placeholder{color:#9a93a8}
-  .controls button{
+  .controls button, .controls select{
     appearance:none;border:1px solid var(--card-border);background:rgba(255,255,255,0.08);
     color:var(--ink);padding:10px 14px;border-radius:10px;font-size:14px;cursor:pointer;
     transition:transform .05s ease, background .15s ease;
+    font-family: inherit;
   }
-  .controls button:hover{background:rgba(255,255,255,0.14)}
+  .controls button:hover, .controls select:hover{background:rgba(255,255,255,0.14)}
   .controls button:active{transform:translateY(1px)}
   .controls button.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#1c0f1f;font-weight:600}
+  .controls select{padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(-45deg,transparent 50%,var(--ink) 50%);background-position:calc(100% - 14px) 52%,calc(100% - 8px) 52%;background-size:6px 6px,6px 6px;background-repeat:no-repeat}
+  .controls select option{background:#1a1340;color:var(--ink)}
   .status{margin-top:10px;font-size:13px;color:var(--muted);min-height:18px}
   .place{margin-top:18px;font-size:14px;color:var(--muted)}
   .place strong{color:var(--ink);font-weight:600}
@@ -119,24 +123,25 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Sky Color Forecast</h1>
-    <p class="sub">Predicts how colorful the next several sunrises and sunsets will be at your location, using cloud cover, humidity, and visibility from Open‑Meteo. No accounts, no API keys, fully free.</p>
+    <h1 data-i18n="app.title">Sky Color Forecast</h1>
+    <p class="sub" data-i18n="app.subtitle">Predicts how colorful the next several sunrises and sunsets will be at your location, using cloud cover, humidity, and visibility from Open‑Meteo. No accounts, no API keys, fully free.</p>
   </header>
 
   <div class="controls">
     <div class="suggestions" style="flex:1 1 240px;position:relative;">
-      <input id="cityInput" type="text" placeholder="Type a city (e.g., Reykjavík, Tokyo, Boise)…" autocomplete="off" />
+      <input id="cityInput" type="text" autocomplete="off" />
       <ul id="suggestList" class="suggest-list hide" role="listbox"></ul>
     </div>
-    <button id="searchBtn">Search</button>
-    <button id="geoBtn" class="primary">📍 Use my location</button>
+    <button id="searchBtn" data-i18n="button.search">Search</button>
+    <button id="geoBtn" class="primary" data-i18n="button.location">📍 Use my location</button>
+    <select id="langSelect" aria-label="Language"></select>
   </div>
 
   <div id="status" class="status"></div>
   <div id="place" class="place"></div>
 
   <section id="topPick" class="top-pick hide">
-    <div class="label">Best window in the next 5 days</div>
+    <div class="label" data-i18n="top.label">Best window in the next 5 days</div>
     <div class="when" id="topWhen"></div>
     <div class="score-row">
       <div class="big" id="topScore"></div>
@@ -148,119 +153,648 @@
   <section id="grid" class="grid"></section>
 
   <details class="science">
-    <summary>How the score is calculated</summary>
-    <p>
-      Vivid sunrises and sunsets need a <b>canvas</b> of high (cirrus) and mid‑level (altocumulus / altostratus) clouds for the low‑angle sunlight to bounce off, but a <b>clear horizon</b> in the direction of the sun so the light can actually reach those clouds. Low clouds near the observer block the show.
-    </p>
-    <p>
-      For each sunrise/sunset, we pull the hourly forecast from Open‑Meteo (no API key) and combine these signals into a 0–100 score:
-    </p>
-    <p>
-      • <b>Mid‑level cloud cover</b> (weight 30%) — best around 30–60%.<br/>
-      • <b>High cloud cover</b> (weight 25%) — best around 30–70%.<br/>
-      • <b>Low cloud cover</b> (weight 20%) — penalty above ~30%, the lower the better.<br/>
-      • <b>Humidity</b> at surface (weight 15%) — lower humidity = cleaner colors.<br/>
-      • <b>Visibility</b> (weight 10%) — higher = more vivid.
-    </p>
-    <p>
-      Sunrise/sunset times come straight from Open‑Meteo's daily astronomy fields, which are computed from the standard NOAA solar position algorithm — so the timing itself is astronomical and accurate to the minute. The "best window" is roughly sunset − 25 min through sunset + 25 min (and the symmetric span around sunrise) — that covers golden hour through early blue hour.
-    </p>
-    <p>Data: <code>api.open-meteo.com</code> for weather, <code>geocoding-api.open-meteo.com</code> for city search. Both are free and CORS‑enabled.</p>
+    <summary data-i18n="science.summary">How the score is calculated</summary>
+    <p data-i18n="science.p1" data-i18n-html="1"></p>
+    <p data-i18n="science.p2"></p>
+    <p data-i18n="science.bullets" data-i18n-html="1"></p>
+    <p data-i18n="science.astro"></p>
+    <p data-i18n="science.data" data-i18n-html="1"></p>
   </details>
 
   <footer>
-    Built as a single static HTML file — host it free on GitHub Pages, Netlify, or Cloudflare Pages.<br/>
-    Weather &amp; astronomy: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. No tracking, no cookies.
+    <span data-i18n="footer.host">Built as a single static HTML file — host it free on GitHub Pages, Netlify, or Cloudflare Pages.</span><br/>
+    <span data-i18n="footer.credit" data-i18n-html="1">Weather &amp; astronomy: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. No tracking, no cookies.</span>
   </footer>
 </div>
 
 <script>
 "use strict";
 
-// --- Scoring ---------------------------------------------------------------
+// ============================================================================
+// I18N — user-facing strings in 10 languages
+// ============================================================================
 
-// Bell curve helper. Returns 0..100 with peak at `peak`, std `sigma`.
+const LANGS = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Español" },
+  { code: "fr", label: "Français" },
+  { code: "de", label: "Deutsch" },
+  { code: "pt", label: "Português" },
+  { code: "it", label: "Italiano" },
+  { code: "ja", label: "日本語" },
+  { code: "zh", label: "中文" },
+  { code: "ko", label: "한국어" },
+  { code: "ar", label: "العربية" },
+];
+
+const RTL_LANGS = new Set(["ar"]);
+
+const I18N = {
+  en: {
+    "app.title": "Sky Color Forecast",
+    "app.subtitle": "Predicts how colorful the next several sunrises and sunsets will be at your location, using cloud cover, humidity, and visibility from Open‑Meteo. No accounts, no API keys, fully free.",
+    "search.placeholder": "Type a city (e.g., Reykjavík, Tokyo, Boise)…",
+    "button.search": "Search",
+    "button.location": "📍 Use my location",
+    "top.label": "Best window in the next 5 days",
+    "top.sunset": "🌇 Sunset",
+    "top.sunrise": "🌅 Sunrise",
+    "top.range": "Step outside between {0} (peak at {1}).",
+    "place.forecast": "Forecast for <strong>{0}</strong>",
+    "place.yourLocation": "your location ({0}, {1})",
+    "day.subtitle": "Sunrise & sunset color forecast",
+    "meta.window": "Window",
+    "meta.clouds": "Clouds",
+    "meta.cloudLow": "low",
+    "meta.cloudMid": "mid",
+    "meta.cloudHigh": "high",
+    "meta.humidity": "Humidity",
+    "meta.visibility": "Visibility",
+    "quality.spectacular": "Spectacular",
+    "quality.vibrant": "Vibrant",
+    "quality.pleasant": "Pleasant",
+    "quality.mediocre": "Mediocre",
+    "quality.drab": "Drab",
+    "status.start": 'Tap "Use my location" or search a city to get started.',
+    "status.fetching": "Fetching forecast…",
+    "status.askLocation": "Asking your browser for location…",
+    "status.denied": "Location denied or unavailable. Try searching for a city instead.",
+    "status.noGeo": "Geolocation is not available in this browser.",
+    "status.typeCity": "Type a city or use your location.",
+    "status.lookup": "Looking up city…",
+    "status.noMatch": "No matches for {0}",
+    "status.searchFail": "Search failed: {0}",
+    "status.loadFail": "Couldn't load forecast. {0}",
+    "score.title": "0–100 sky color score",
+    "science.summary": "How the score is calculated",
+    "science.p1": "Vivid sunrises and sunsets need a <b>canvas</b> of high (cirrus) and mid-level (altocumulus / altostratus) clouds for the low-angle sunlight to bounce off, but a <b>clear horizon</b> in the direction of the sun so the light can actually reach those clouds. Low clouds near the observer block the show.",
+    "science.p2": "For each sunrise/sunset, we pull the hourly forecast from Open-Meteo (no API key) and combine these signals into a 0–100 score:",
+    "science.bullets": "• <b>Mid-level cloud cover</b> (weight 30%) — best around 30–60%.<br/>• <b>High cloud cover</b> (weight 25%) — best around 30–70%.<br/>• <b>Low cloud cover</b> (weight 20%) — penalty above ~30%, the lower the better.<br/>• <b>Humidity</b> at surface (weight 15%) — lower humidity = cleaner colors.<br/>• <b>Visibility</b> (weight 10%) — higher = more vivid.",
+    "science.astro": "Sunrise/sunset times come straight from Open-Meteo's daily astronomy fields, which are computed from the standard NOAA solar position algorithm — so the timing itself is astronomical and accurate to the minute. The \"best window\" is roughly sunset − 25 min through sunset + 25 min (and the symmetric span around sunrise) — that covers golden hour through early blue hour.",
+    "science.data": "Data: <code>api.open-meteo.com</code> for weather, <code>geocoding-api.open-meteo.com</code> for city search. Both are free and CORS-enabled.",
+    "footer.host": "Built as a single static HTML file — host it free on GitHub Pages, Netlify, or Cloudflare Pages.",
+    "footer.credit": 'Weather &amp; astronomy: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. No tracking, no cookies.',
+  },
+
+  es: {
+    "app.title": "Previsión del color del cielo",
+    "app.subtitle": "Predice cuán coloridos serán los próximos amaneceres y atardeceres en tu ubicación, usando nubosidad, humedad y visibilidad de Open‑Meteo. Sin cuentas, sin claves API, totalmente gratis.",
+    "search.placeholder": "Escribe una ciudad (p. ej., Reikiavik, Tokio, Boise)…",
+    "button.search": "Buscar",
+    "button.location": "📍 Usar mi ubicación",
+    "top.label": "Mejor ventana en los próximos 5 días",
+    "top.sunset": "🌇 Atardecer",
+    "top.sunrise": "🌅 Amanecer",
+    "top.range": "Sal entre las {0} (punto álgido a las {1}).",
+    "place.forecast": "Previsión para <strong>{0}</strong>",
+    "place.yourLocation": "tu ubicación ({0}, {1})",
+    "day.subtitle": "Previsión de color del amanecer y atardecer",
+    "meta.window": "Ventana",
+    "meta.clouds": "Nubes",
+    "meta.cloudLow": "bajas",
+    "meta.cloudMid": "medias",
+    "meta.cloudHigh": "altas",
+    "meta.humidity": "Humedad",
+    "meta.visibility": "Visibilidad",
+    "quality.spectacular": "Espectacular",
+    "quality.vibrant": "Vibrante",
+    "quality.pleasant": "Agradable",
+    "quality.mediocre": "Mediocre",
+    "quality.drab": "Apagado",
+    "status.start": 'Pulsa "Usar mi ubicación" o busca una ciudad para empezar.',
+    "status.fetching": "Obteniendo previsión…",
+    "status.askLocation": "Pidiendo ubicación al navegador…",
+    "status.denied": "Ubicación denegada o no disponible. Prueba a buscar una ciudad.",
+    "status.noGeo": "La geolocalización no está disponible en este navegador.",
+    "status.typeCity": "Escribe una ciudad o usa tu ubicación.",
+    "status.lookup": "Buscando ciudad…",
+    "status.noMatch": "Sin resultados para {0}",
+    "status.searchFail": "Búsqueda fallida: {0}",
+    "status.loadFail": "No se pudo cargar la previsión. {0}",
+    "score.title": "Puntuación de color del cielo 0–100",
+    "science.summary": "Cómo se calcula la puntuación",
+    "science.p1": "Los amaneceres y atardeceres vívidos necesitan un <b>lienzo</b> de nubes altas (cirros) y medias (altocúmulos / altoestratos) donde rebotar la luz rasante, pero también un <b>horizonte despejado</b> en dirección al sol para que esa luz llegue a las nubes. Las nubes bajas cercanas bloquean el espectáculo.",
+    "science.p2": "Para cada amanecer/atardecer, consultamos la previsión horaria de Open‑Meteo (sin clave API) y combinamos estas señales en una puntuación de 0 a 100:",
+    "science.bullets": "• <b>Nubes medias</b> (peso 30%) — ideal entre 30–60%.<br/>• <b>Nubes altas</b> (peso 25%) — ideal entre 30–70%.<br/>• <b>Nubes bajas</b> (peso 20%) — penalización por encima de ~30%, cuanto menos mejor.<br/>• <b>Humedad</b> en superficie (peso 15%) — menos humedad = colores más limpios.<br/>• <b>Visibilidad</b> (peso 10%) — más = más vivo.",
+    "science.astro": "Las horas de amanecer y atardecer provienen de los campos diarios de astronomía de Open‑Meteo, calculados con el algoritmo estándar de la NOAA — con precisión de minuto. La \"mejor ventana\" abarca aproximadamente desde 25 min antes hasta 25 min después del evento: la hora dorada hasta el inicio de la hora azul.",
+    "science.data": "Datos: <code>api.open-meteo.com</code> para el tiempo, <code>geocoding-api.open-meteo.com</code> para buscar ciudades. Ambos gratis y con CORS habilitado.",
+    "footer.host": "Un único archivo HTML estático — hospédalo gratis en GitHub Pages, Netlify o Cloudflare Pages.",
+    "footer.credit": 'Tiempo y astronomía: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. Sin rastreo, sin cookies.',
+  },
+
+  fr: {
+    "app.title": "Prévision de couleur du ciel",
+    "app.subtitle": "Prédit à quel point les prochains levers et couchers de soleil seront colorés près de chez vous, à partir de la nébulosité, l'humidité et la visibilité d'Open‑Meteo. Sans compte, sans clé API, 100% gratuit.",
+    "search.placeholder": "Tapez une ville (p. ex. Reykjavík, Tokyo, Boise)…",
+    "button.search": "Rechercher",
+    "button.location": "📍 Utiliser ma position",
+    "top.label": "Meilleur créneau des 5 prochains jours",
+    "top.sunset": "🌇 Coucher",
+    "top.sunrise": "🌅 Lever",
+    "top.range": "Sortez entre {0} (pic à {1}).",
+    "place.forecast": "Prévision pour <strong>{0}</strong>",
+    "place.yourLocation": "votre position ({0}, {1})",
+    "day.subtitle": "Prévision de couleur du lever et du coucher",
+    "meta.window": "Créneau",
+    "meta.clouds": "Nuages",
+    "meta.cloudLow": "bas",
+    "meta.cloudMid": "moyens",
+    "meta.cloudHigh": "hauts",
+    "meta.humidity": "Humidité",
+    "meta.visibility": "Visibilité",
+    "quality.spectacular": "Spectaculaire",
+    "quality.vibrant": "Vif",
+    "quality.pleasant": "Agréable",
+    "quality.mediocre": "Médiocre",
+    "quality.drab": "Terne",
+    "status.start": 'Cliquez sur "Utiliser ma position" ou cherchez une ville pour commencer.',
+    "status.fetching": "Récupération des prévisions…",
+    "status.askLocation": "Demande de position au navigateur…",
+    "status.denied": "Position refusée ou indisponible. Essayez de chercher une ville.",
+    "status.noGeo": "La géolocalisation n'est pas disponible dans ce navigateur.",
+    "status.typeCity": "Tapez une ville ou utilisez votre position.",
+    "status.lookup": "Recherche de la ville…",
+    "status.noMatch": "Aucun résultat pour {0}",
+    "status.searchFail": "Échec de la recherche : {0}",
+    "status.loadFail": "Impossible de charger les prévisions. {0}",
+    "score.title": "Score de couleur du ciel 0–100",
+    "science.summary": "Comment le score est calculé",
+    "science.p1": "Des levers et couchers de soleil vifs exigent une <b>toile</b> de nuages hauts (cirrus) et moyens (altocumulus / altostratus) sur laquelle la lumière rasante se reflète, mais aussi un <b>horizon dégagé</b> en direction du soleil pour que la lumière atteigne ces nuages. Les nuages bas proches bloquent le spectacle.",
+    "science.p2": "Pour chaque lever/coucher, nous récupérons les prévisions horaires d'Open‑Meteo (sans clé API) et combinons ces signaux en un score de 0 à 100 :",
+    "science.bullets": "• <b>Nuages moyens</b> (poids 30%) — optimum entre 30–60%.<br/>• <b>Nuages hauts</b> (poids 25%) — optimum entre 30–70%.<br/>• <b>Nuages bas</b> (poids 20%) — pénalité au-dessus de ~30%, moins c'est mieux.<br/>• <b>Humidité</b> en surface (poids 15%) — moins d'humidité = couleurs plus nettes.<br/>• <b>Visibilité</b> (poids 10%) — plus élevée = plus vive.",
+    "science.astro": "Les heures du lever et du coucher viennent directement des champs d'astronomie quotidiens d'Open‑Meteo, calculés par l'algorithme standard de la NOAA — précis à la minute. La \"meilleure fenêtre\" couvre environ 25 min avant jusqu'à 25 min après l'événement : l'heure dorée jusqu'au début de l'heure bleue.",
+    "science.data": "Données : <code>api.open-meteo.com</code> pour la météo, <code>geocoding-api.open-meteo.com</code> pour la recherche de villes. Gratuits et compatibles CORS.",
+    "footer.host": "Un seul fichier HTML statique — hébergez-le gratuitement sur GitHub Pages, Netlify ou Cloudflare Pages.",
+    "footer.credit": 'Météo &amp; astronomie : <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. Aucun suivi, aucun cookie.',
+  },
+
+  de: {
+    "app.title": "Himmelsfarben-Vorhersage",
+    "app.subtitle": "Sagt voraus, wie farbenprächtig die nächsten Sonnenaufgänge und -untergänge bei dir werden — basierend auf Bewölkung, Luftfeuchte und Sicht von Open‑Meteo. Ohne Konto, ohne API‑Schlüssel, komplett kostenlos.",
+    "search.placeholder": "Stadt eingeben (z. B. Reykjavík, Tokio, Boise)…",
+    "button.search": "Suchen",
+    "button.location": "📍 Meinen Standort nutzen",
+    "top.label": "Bestes Zeitfenster in den nächsten 5 Tagen",
+    "top.sunset": "🌇 Sonnenuntergang",
+    "top.sunrise": "🌅 Sonnenaufgang",
+    "top.range": "Geh zwischen {0} raus (Höhepunkt um {1}).",
+    "place.forecast": "Vorhersage für <strong>{0}</strong>",
+    "place.yourLocation": "deinen Standort ({0}, {1})",
+    "day.subtitle": "Farbvorhersage für Auf- und Untergang",
+    "meta.window": "Fenster",
+    "meta.clouds": "Wolken",
+    "meta.cloudLow": "niedrig",
+    "meta.cloudMid": "mittel",
+    "meta.cloudHigh": "hoch",
+    "meta.humidity": "Luftfeuchte",
+    "meta.visibility": "Sicht",
+    "quality.spectacular": "Spektakulär",
+    "quality.vibrant": "Leuchtend",
+    "quality.pleasant": "Angenehm",
+    "quality.mediocre": "Mäßig",
+    "quality.drab": "Trüb",
+    "status.start": 'Tippe auf "Meinen Standort nutzen" oder suche eine Stadt, um zu starten.',
+    "status.fetching": "Vorhersage wird geladen…",
+    "status.askLocation": "Browser fragt nach Standort…",
+    "status.denied": "Standort abgelehnt oder nicht verfügbar. Versuche, nach einer Stadt zu suchen.",
+    "status.noGeo": "Standortbestimmung ist in diesem Browser nicht verfügbar.",
+    "status.typeCity": "Gib eine Stadt ein oder nutze deinen Standort.",
+    "status.lookup": "Stadt wird gesucht…",
+    "status.noMatch": "Keine Treffer für {0}",
+    "status.searchFail": "Suche fehlgeschlagen: {0}",
+    "status.loadFail": "Vorhersage konnte nicht geladen werden. {0}",
+    "score.title": "Himmelsfarben-Score 0–100",
+    "science.summary": "Wie der Score berechnet wird",
+    "science.p1": "Leuchtende Sonnenauf- und -untergänge brauchen eine <b>Leinwand</b> aus hohen (Zirrus) und mittelhohen (Altocumulus/Altostratus) Wolken, an denen das flache Sonnenlicht reflektiert wird — aber auch einen <b>klaren Horizont</b> in Sonnenrichtung, damit das Licht diese Wolken überhaupt erreicht. Niedrige Wolken in der Nähe verdecken die Show.",
+    "science.p2": "Für jeden Auf-/Untergang holen wir die Stundenvorhersage von Open‑Meteo (ohne API-Schlüssel) und fassen diese Signale zu einem Score von 0–100 zusammen:",
+    "science.bullets": "• <b>Mittelhohe Wolken</b> (Gewicht 30%) — optimal 30–60%.<br/>• <b>Hohe Wolken</b> (Gewicht 25%) — optimal 30–70%.<br/>• <b>Niedrige Wolken</b> (Gewicht 20%) — Abzug ab ~30%, weniger ist besser.<br/>• <b>Luftfeuchte</b> am Boden (Gewicht 15%) — trockener = klarere Farben.<br/>• <b>Sicht</b> (Gewicht 10%) — höher = intensiver.",
+    "science.astro": "Die Zeiten stammen aus den täglichen Astronomie-Feldern von Open‑Meteo, berechnet nach dem Standard-NOAA-Sonnenpositions-Algorithmus — minutengenau. Das \"beste Fenster\" ist grob Ereignis − 25 min bis Ereignis + 25 min, also goldene Stunde bis zur blauen Stunde.",
+    "science.data": "Daten: <code>api.open-meteo.com</code> für Wetter, <code>geocoding-api.open-meteo.com</code> für Städtesuche. Beide kostenlos und CORS-fähig.",
+    "footer.host": "Eine einzige statische HTML-Datei — kostenlos hostbar auf GitHub Pages, Netlify oder Cloudflare Pages.",
+    "footer.credit": 'Wetter &amp; Astronomie: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. Kein Tracking, keine Cookies.',
+  },
+
+  pt: {
+    "app.title": "Previsão de cor do céu",
+    "app.subtitle": "Prevê o quão coloridos serão os próximos nasceres e pores do sol na sua localização, usando nebulosidade, umidade e visibilidade do Open‑Meteo. Sem conta, sem chaves API, totalmente grátis.",
+    "search.placeholder": "Digite uma cidade (ex.: Reiquiavique, Tóquio, Boise)…",
+    "button.search": "Buscar",
+    "button.location": "📍 Usar minha localização",
+    "top.label": "Melhor janela nos próximos 5 dias",
+    "top.sunset": "🌇 Pôr do sol",
+    "top.sunrise": "🌅 Nascer do sol",
+    "top.range": "Saia entre {0} (auge às {1}).",
+    "place.forecast": "Previsão para <strong>{0}</strong>",
+    "place.yourLocation": "sua localização ({0}, {1})",
+    "day.subtitle": "Previsão de cor ao nascer e pôr do sol",
+    "meta.window": "Janela",
+    "meta.clouds": "Nuvens",
+    "meta.cloudLow": "baixas",
+    "meta.cloudMid": "médias",
+    "meta.cloudHigh": "altas",
+    "meta.humidity": "Umidade",
+    "meta.visibility": "Visibilidade",
+    "quality.spectacular": "Espetacular",
+    "quality.vibrant": "Vibrante",
+    "quality.pleasant": "Agradável",
+    "quality.mediocre": "Mediana",
+    "quality.drab": "Sem graça",
+    "status.start": 'Toque em "Usar minha localização" ou busque uma cidade para começar.',
+    "status.fetching": "Buscando previsão…",
+    "status.askLocation": "Pedindo localização ao navegador…",
+    "status.denied": "Localização negada ou indisponível. Tente buscar uma cidade.",
+    "status.noGeo": "Geolocalização não disponível neste navegador.",
+    "status.typeCity": "Digite uma cidade ou use sua localização.",
+    "status.lookup": "Procurando cidade…",
+    "status.noMatch": "Nenhum resultado para {0}",
+    "status.searchFail": "Falha na busca: {0}",
+    "status.loadFail": "Não foi possível carregar a previsão. {0}",
+    "score.title": "Pontuação de cor do céu 0–100",
+    "science.summary": "Como a pontuação é calculada",
+    "science.p1": "Nasceres e pores do sol vívidos precisam de uma <b>tela</b> de nuvens altas (cirros) e médias (altocúmulos/altostratos) para a luz rasante refletir, mas também de um <b>horizonte limpo</b> na direção do sol para que a luz chegue até essas nuvens. Nuvens baixas próximas bloqueiam o espetáculo.",
+    "science.p2": "Para cada evento, puxamos a previsão horária do Open‑Meteo (sem chave) e combinamos estes sinais em uma nota de 0 a 100:",
+    "science.bullets": "• <b>Nuvens médias</b> (peso 30%) — ideal 30–60%.<br/>• <b>Nuvens altas</b> (peso 25%) — ideal 30–70%.<br/>• <b>Nuvens baixas</b> (peso 20%) — penalidade acima de ~30%, menos é melhor.<br/>• <b>Umidade</b> à superfície (peso 15%) — menor umidade = cores mais limpas.<br/>• <b>Visibilidade</b> (peso 10%) — maior = mais vívida.",
+    "science.astro": "Os horários vêm dos campos diários de astronomia do Open‑Meteo, calculados pelo algoritmo padrão da NOAA — precisos ao minuto. A \"melhor janela\" vai de cerca de 25 min antes até 25 min depois do evento: hora dourada até o início da hora azul.",
+    "science.data": "Dados: <code>api.open-meteo.com</code> para clima, <code>geocoding-api.open-meteo.com</code> para busca de cidades. Ambos gratuitos e com CORS.",
+    "footer.host": "Um único arquivo HTML estático — hospede grátis no GitHub Pages, Netlify ou Cloudflare Pages.",
+    "footer.credit": 'Clima &amp; astronomia: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. Sem rastreamento, sem cookies.',
+  },
+
+  it: {
+    "app.title": "Previsione dei colori del cielo",
+    "app.subtitle": "Prevede quanto saranno colorati i prossimi sorgere e tramonto del sole nella tua zona, usando copertura nuvolosa, umidità e visibilità da Open‑Meteo. Niente account, niente chiavi API, totalmente gratuito.",
+    "search.placeholder": "Scrivi una città (es. Reykjavík, Tokyo, Boise)…",
+    "button.search": "Cerca",
+    "button.location": "📍 Usa la mia posizione",
+    "top.label": "Miglior finestra nei prossimi 5 giorni",
+    "top.sunset": "🌇 Tramonto",
+    "top.sunrise": "🌅 Alba",
+    "top.range": "Esci tra le {0} (picco alle {1}).",
+    "place.forecast": "Previsione per <strong>{0}</strong>",
+    "place.yourLocation": "la tua posizione ({0}, {1})",
+    "day.subtitle": "Previsione di colore per alba e tramonto",
+    "meta.window": "Finestra",
+    "meta.clouds": "Nuvole",
+    "meta.cloudLow": "basse",
+    "meta.cloudMid": "medie",
+    "meta.cloudHigh": "alte",
+    "meta.humidity": "Umidità",
+    "meta.visibility": "Visibilità",
+    "quality.spectacular": "Spettacolare",
+    "quality.vibrant": "Vivace",
+    "quality.pleasant": "Gradevole",
+    "quality.mediocre": "Mediocre",
+    "quality.drab": "Smorto",
+    "status.start": 'Tocca "Usa la mia posizione" o cerca una città per iniziare.',
+    "status.fetching": "Caricamento previsione…",
+    "status.askLocation": "Richiesta posizione al browser…",
+    "status.denied": "Posizione negata o non disponibile. Prova a cercare una città.",
+    "status.noGeo": "La geolocalizzazione non è disponibile in questo browser.",
+    "status.typeCity": "Scrivi una città o usa la tua posizione.",
+    "status.lookup": "Ricerca città…",
+    "status.noMatch": "Nessun risultato per {0}",
+    "status.searchFail": "Ricerca fallita: {0}",
+    "status.loadFail": "Impossibile caricare la previsione. {0}",
+    "score.title": "Punteggio colore del cielo 0–100",
+    "science.summary": "Come si calcola il punteggio",
+    "science.p1": "Albe e tramonti intensi richiedono una <b>tela</b> di nuvole alte (cirri) e medie (altocumuli/altostrati) su cui rimbalzi la luce radente, ma anche un <b>orizzonte libero</b> verso il sole perché quella luce raggiunga le nuvole. Le nuvole basse vicine bloccano lo spettacolo.",
+    "science.p2": "Per ogni alba/tramonto prendiamo la previsione oraria di Open‑Meteo (senza chiave) e uniamo questi segnali in un punteggio 0–100:",
+    "science.bullets": "• <b>Nuvole medie</b> (peso 30%) — ideale 30–60%.<br/>• <b>Nuvole alte</b> (peso 25%) — ideale 30–70%.<br/>• <b>Nuvole basse</b> (peso 20%) — penalità oltre ~30%, meno è meglio.<br/>• <b>Umidità</b> al suolo (peso 15%) — meno umidità = colori più puliti.<br/>• <b>Visibilità</b> (peso 10%) — più alta = più vivace.",
+    "science.astro": "Gli orari di alba e tramonto arrivano dai campi astronomici giornalieri di Open‑Meteo, calcolati con l'algoritmo NOAA — precisi al minuto. La \"finestra migliore\" va circa da 25 min prima a 25 min dopo l'evento: ora dorata fino all'inizio dell'ora blu.",
+    "science.data": "Dati: <code>api.open-meteo.com</code> per il meteo, <code>geocoding-api.open-meteo.com</code> per le città. Entrambi gratuiti e CORS-enabled.",
+    "footer.host": "Un unico file HTML statico — ospitalo gratis su GitHub Pages, Netlify o Cloudflare Pages.",
+    "footer.credit": 'Meteo &amp; astronomia: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. Nessun tracciamento, nessun cookie.',
+  },
+
+  ja: {
+    "app.title": "空の色予報",
+    "app.subtitle": "Open‑Meteoの雲量・湿度・視程データを使い、あなたの場所で次の数日間の日の出・日の入りがどれだけ色鮮やかになるかを予測します。アカウント不要、APIキー不要、完全無料。",
+    "search.placeholder": "都市を入力（例：レイキャビク、東京、ボイジー）…",
+    "button.search": "検索",
+    "button.location": "📍 現在地を使う",
+    "top.label": "今後5日間のベストな時間帯",
+    "top.sunset": "🌇 夕焼け",
+    "top.sunrise": "🌅 朝焼け",
+    "top.range": "{0} に外へ（ピーク: {1}）。",
+    "place.forecast": "<strong>{0}</strong> の予報",
+    "place.yourLocation": "現在地（{0}, {1}）",
+    "day.subtitle": "日の出・日の入りの色予報",
+    "meta.window": "時間帯",
+    "meta.clouds": "雲",
+    "meta.cloudLow": "下層",
+    "meta.cloudMid": "中層",
+    "meta.cloudHigh": "上層",
+    "meta.humidity": "湿度",
+    "meta.visibility": "視程",
+    "quality.spectacular": "絶景",
+    "quality.vibrant": "鮮やか",
+    "quality.pleasant": "良好",
+    "quality.mediocre": "普通",
+    "quality.drab": "地味",
+    "status.start": '「現在地を使う」をタップするか、都市を検索して開始。',
+    "status.fetching": "予報を取得中…",
+    "status.askLocation": "ブラウザに位置情報を問い合わせ中…",
+    "status.denied": "位置情報が拒否または利用不可です。都市名で検索してみてください。",
+    "status.noGeo": "このブラウザでは位置情報が利用できません。",
+    "status.typeCity": "都市を入力するか、現在地を使用してください。",
+    "status.lookup": "都市を検索中…",
+    "status.noMatch": "{0} の結果なし",
+    "status.searchFail": "検索失敗: {0}",
+    "status.loadFail": "予報を取得できませんでした。{0}",
+    "score.title": "空の色スコア 0〜100",
+    "science.summary": "スコアの計算方法",
+    "science.p1": "鮮やかな朝焼け・夕焼けには、低角度の光を反射させる高層雲（巻雲）と中層雲（高積雲／高層雲）の<b>キャンバス</b>が必要で、同時に太陽方向の<b>澄んだ地平線</b>がないと光がその雲に届きません。近くの下層雲はショーを遮ります。",
+    "science.p2": "日の出・日の入りごとに、Open‑Meteoの毎時予報（APIキー不要）を取得し、以下の指標を統合して0〜100のスコアを算出します:",
+    "science.bullets": "• <b>中層雲</b>（重み30%）— 30〜60%が最適。<br/>• <b>上層雲</b>（重み25%）— 30〜70%が最適。<br/>• <b>下層雲</b>（重み20%）— ~30%超でペナルティ、少ないほど良い。<br/>• <b>地表湿度</b>（重み15%）— 湿度が低いほど色がクリア。<br/>• <b>視程</b>（重み10%）— 高いほど鮮やか。",
+    "science.astro": "日の出・日の入り時刻はOpen‑Meteoの日次天文フィールド由来で、NOAAの標準太陽位置アルゴリズムによる分単位の精度です。「ベストな時間帯」はおおむねイベントの25分前〜25分後で、ゴールデンアワーからブルーアワー初期までを含みます。",
+    "science.data": "データ: 気象は <code>api.open-meteo.com</code>、都市検索は <code>geocoding-api.open-meteo.com</code>。どちらも無料でCORS対応。",
+    "footer.host": "単一の静的HTMLファイル — GitHub Pages、Netlify、Cloudflare Pagesで無料ホスティング可能。",
+    "footer.credit": '気象＆天文: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>。追跡なし、Cookieなし。',
+  },
+
+  zh: {
+    "app.title": "天空色彩预报",
+    "app.subtitle": "使用 Open‑Meteo 的云量、湿度和能见度数据，预测你所在地未来几天日出和日落的色彩丰富程度。无需账户、无需 API 密钥、完全免费。",
+    "search.placeholder": "输入城市（例如：雷克雅未克、东京、博伊西）…",
+    "button.search": "搜索",
+    "button.location": "📍 使用我的位置",
+    "top.label": "未来 5 天内的最佳时段",
+    "top.sunset": "🌇 日落",
+    "top.sunrise": "🌅 日出",
+    "top.range": "{0} 之间出门（峰值 {1}）。",
+    "place.forecast": "<strong>{0}</strong> 的预报",
+    "place.yourLocation": "你的位置（{0}, {1}）",
+    "day.subtitle": "日出与日落色彩预报",
+    "meta.window": "时段",
+    "meta.clouds": "云量",
+    "meta.cloudLow": "低云",
+    "meta.cloudMid": "中云",
+    "meta.cloudHigh": "高云",
+    "meta.humidity": "湿度",
+    "meta.visibility": "能见度",
+    "quality.spectacular": "壮观",
+    "quality.vibrant": "鲜艳",
+    "quality.pleasant": "宜人",
+    "quality.mediocre": "一般",
+    "quality.drab": "平淡",
+    "status.start": '点击"使用我的位置"或搜索城市以开始。',
+    "status.fetching": "正在获取预报…",
+    "status.askLocation": "正在向浏览器请求位置…",
+    "status.denied": "位置被拒绝或不可用，请尝试搜索城市。",
+    "status.noGeo": "此浏览器不支持地理定位。",
+    "status.typeCity": "请输入城市或使用你的位置。",
+    "status.lookup": "正在查找城市…",
+    "status.noMatch": "未找到 {0}",
+    "status.searchFail": "搜索失败: {0}",
+    "status.loadFail": "无法加载预报。{0}",
+    "score.title": "天空色彩评分 0–100",
+    "science.summary": "评分如何计算",
+    "science.p1": "绚丽的日出和日落需要高层（卷云）和中层（高积云/高层云）云作为反射低角度阳光的<b>画布</b>，同时需要太阳方向的<b>清澈地平线</b>让光线抵达这些云。近处的低云会挡住整个表演。",
+    "science.p2": "对于每次日出/日落，我们从 Open‑Meteo 拉取逐小时预报（无需 API 密钥），并将以下信号合成为 0–100 的分值：",
+    "science.bullets": "• <b>中层云量</b>（权重 30%）— 30–60% 最佳。<br/>• <b>高层云量</b>（权重 25%）— 30–70% 最佳。<br/>• <b>低层云量</b>（权重 20%）— 超过 ~30% 扣分，越少越好。<br/>• <b>地表湿度</b>（权重 15%）— 湿度越低色彩越纯净。<br/>• <b>能见度</b>（权重 10%）— 越高越鲜艳。",
+    "science.astro": "日出/日落时刻直接来自 Open‑Meteo 的每日天文字段，由 NOAA 标准太阳位置算法计算，精确到分钟。\"最佳时段\"大约是事件前 25 分钟到事件后 25 分钟，涵盖黄金时段到蓝调时段的早期。",
+    "science.data": "数据源：天气 <code>api.open-meteo.com</code>，城市搜索 <code>geocoding-api.open-meteo.com</code>。均免费且支持 CORS。",
+    "footer.host": "单一静态 HTML 文件 — 可免费托管于 GitHub Pages、Netlify 或 Cloudflare Pages。",
+    "footer.credit": '气象与天文：<a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>。无追踪，无 Cookie。',
+  },
+
+  ko: {
+    "app.title": "하늘 색 예보",
+    "app.subtitle": "Open‑Meteo의 구름·습도·시정 데이터를 사용해, 당신의 위치에서 앞으로 며칠간 일출과 일몰이 얼마나 다채로울지 예측합니다. 계정 없음, API 키 없음, 완전 무료.",
+    "search.placeholder": "도시 입력 (예: 레이캬비크, 도쿄, 보이시)…",
+    "button.search": "검색",
+    "button.location": "📍 내 위치 사용",
+    "top.label": "앞으로 5일 중 최고의 시간대",
+    "top.sunset": "🌇 일몰",
+    "top.sunrise": "🌅 일출",
+    "top.range": "{0} 사이에 밖으로 (정점 {1}).",
+    "place.forecast": "<strong>{0}</strong> 예보",
+    "place.yourLocation": "내 위치 ({0}, {1})",
+    "day.subtitle": "일출·일몰 색 예보",
+    "meta.window": "시간대",
+    "meta.clouds": "구름",
+    "meta.cloudLow": "하층",
+    "meta.cloudMid": "중층",
+    "meta.cloudHigh": "상층",
+    "meta.humidity": "습도",
+    "meta.visibility": "시정",
+    "quality.spectacular": "장관",
+    "quality.vibrant": "선명",
+    "quality.pleasant": "괜찮음",
+    "quality.mediocre": "평범",
+    "quality.drab": "단조로움",
+    "status.start": '"내 위치 사용"을 누르거나 도시를 검색해 시작하세요.',
+    "status.fetching": "예보 가져오는 중…",
+    "status.askLocation": "브라우저에 위치 요청 중…",
+    "status.denied": "위치가 거부되었거나 사용할 수 없습니다. 도시를 검색해 보세요.",
+    "status.noGeo": "이 브라우저에서는 위치 정보를 사용할 수 없습니다.",
+    "status.typeCity": "도시를 입력하거나 내 위치를 사용하세요.",
+    "status.lookup": "도시 찾는 중…",
+    "status.noMatch": "{0} 검색 결과 없음",
+    "status.searchFail": "검색 실패: {0}",
+    "status.loadFail": "예보를 불러오지 못했습니다. {0}",
+    "score.title": "하늘 색 점수 0–100",
+    "science.summary": "점수 계산 방식",
+    "science.p1": "선명한 일출과 일몰에는 낮은 각도의 햇빛이 반사될 상층(권운)과 중층(고적운/고층운) 구름의 <b>캔버스</b>가 필요하지만, 그 빛이 그 구름에 닿으려면 태양 방향의 <b>맑은 수평선</b>도 필요합니다. 가까운 하층 구름은 쇼를 가립니다.",
+    "science.p2": "각 일출/일몰에 대해 Open‑Meteo의 시간별 예보(API 키 불필요)를 가져와 다음 신호를 0–100 점으로 합산합니다:",
+    "science.bullets": "• <b>중층 구름</b> (가중치 30%) — 30–60%가 최적.<br/>• <b>상층 구름</b> (가중치 25%) — 30–70%가 최적.<br/>• <b>하층 구름</b> (가중치 20%) — ~30% 초과 시 감점, 적을수록 좋음.<br/>• <b>지표 습도</b> (가중치 15%) — 낮을수록 색이 선명.<br/>• <b>시정</b> (가중치 10%) — 높을수록 생생함.",
+    "science.astro": "일출·일몰 시각은 Open‑Meteo의 일일 천문 필드에서 바로 가져오며, NOAA 표준 태양 위치 알고리즘으로 분 단위 정확도로 계산됩니다. \"최적 구간\"은 대략 이벤트 25분 전부터 25분 후까지로, 골든 아워부터 블루 아워 초입까지 포함합니다.",
+    "science.data": "데이터: 날씨는 <code>api.open-meteo.com</code>, 도시 검색은 <code>geocoding-api.open-meteo.com</code>. 둘 다 무료이며 CORS 지원.",
+    "footer.host": "단일 정적 HTML 파일 — GitHub Pages, Netlify, Cloudflare Pages에서 무료로 호스팅.",
+    "footer.credit": '날씨 및 천문: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. 추적 없음, 쿠키 없음.',
+  },
+
+  ar: {
+    "app.title": "توقعات ألوان السماء",
+    "app.subtitle": "يتوقع مدى جمال ألوان الشروق والغروب في موقعك خلال الأيام القادمة باستخدام بيانات الغيوم والرطوبة والرؤية من Open‑Meteo. بدون حسابات، بدون مفاتيح API، مجاني تمامًا.",
+    "search.placeholder": "اكتب اسم مدينة (مثال: ريكيافيك، طوكيو، بويزي)…",
+    "button.search": "بحث",
+    "button.location": "📍 استخدم موقعي",
+    "top.label": "أفضل وقت في الأيام الخمسة القادمة",
+    "top.sunset": "🌇 الغروب",
+    "top.sunrise": "🌅 الشروق",
+    "top.range": "اخرج بين {0} (الذروة {1}).",
+    "place.forecast": "توقعات <strong>{0}</strong>",
+    "place.yourLocation": "موقعك ({0}, {1})",
+    "day.subtitle": "توقعات ألوان الشروق والغروب",
+    "meta.window": "النافذة",
+    "meta.clouds": "الغيوم",
+    "meta.cloudLow": "منخفضة",
+    "meta.cloudMid": "متوسطة",
+    "meta.cloudHigh": "عالية",
+    "meta.humidity": "الرطوبة",
+    "meta.visibility": "الرؤية",
+    "quality.spectacular": "مذهل",
+    "quality.vibrant": "زاهي",
+    "quality.pleasant": "لطيف",
+    "quality.mediocre": "عادي",
+    "quality.drab": "باهت",
+    "status.start": 'اضغط "استخدم موقعي" أو ابحث عن مدينة للبدء.',
+    "status.fetching": "جارٍ جلب التوقعات…",
+    "status.askLocation": "طلب الموقع من المتصفح…",
+    "status.denied": "تم رفض الموقع أو غير متاح. جرّب البحث عن مدينة.",
+    "status.noGeo": "تحديد الموقع الجغرافي غير متاح في هذا المتصفح.",
+    "status.typeCity": "اكتب اسم مدينة أو استخدم موقعك.",
+    "status.lookup": "جارٍ البحث عن المدينة…",
+    "status.noMatch": "لا نتائج لـ {0}",
+    "status.searchFail": "فشل البحث: {0}",
+    "status.loadFail": "تعذر تحميل التوقعات. {0}",
+    "score.title": "درجة ألوان السماء 0–100",
+    "science.summary": "كيف تُحسب الدرجة",
+    "science.p1": "تحتاج ألوان الشروق والغروب الزاهية إلى <b>لوحة</b> من الغيوم العالية (السمحاقية) والمتوسطة (ركامية/طبقية متوسطة) ينعكس عليها الضوء الأفقي، وكذلك إلى <b>أفق صافٍ</b> باتجاه الشمس حتى يصل الضوء إلى تلك الغيوم. الغيوم المنخفضة القريبة تحجب المشهد.",
+    "science.p2": "لكل شروق/غروب نجلب التوقعات الساعية من Open‑Meteo (بدون مفتاح)، ونجمع هذه الإشارات في درجة من 0 إلى 100:",
+    "science.bullets": "• <b>الغيوم المتوسطة</b> (وزن 30%) — الأفضل 30–60%.<br/>• <b>الغيوم العالية</b> (وزن 25%) — الأفضل 30–70%.<br/>• <b>الغيوم المنخفضة</b> (وزن 20%) — خصم فوق ~30%، كلما قلّت كان أفضل.<br/>• <b>الرطوبة</b> قرب السطح (وزن 15%) — الرطوبة الأقل = ألوان أنقى.<br/>• <b>الرؤية</b> (وزن 10%) — كلما زادت ازداد التوهج.",
+    "science.astro": "أوقات الشروق والغروب تأتي من الحقول الفلكية اليومية في Open‑Meteo، محسوبة بخوارزمية NOAA القياسية لموضع الشمس — بدقة دقيقة. \"أفضل نافذة\" تمتد تقريبًا من 25 دقيقة قبل الحدث إلى 25 دقيقة بعده، ما يشمل الساعة الذهبية وبداية الساعة الزرقاء.",
+    "science.data": "البيانات: <code>api.open-meteo.com</code> للطقس، <code>geocoding-api.open-meteo.com</code> للبحث عن المدن. كلاهما مجاني ويدعم CORS.",
+    "footer.host": "ملف HTML ثابت واحد — استضفه مجانًا على GitHub Pages أو Netlify أو Cloudflare Pages.",
+    "footer.credit": 'الطقس والفلك: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. لا تتبّع، لا ملفات تعريف ارتباط.',
+  },
+};
+
+// ============================================================================
+// Language state
+// ============================================================================
+
+const STORAGE_KEY = "skyColorForecast.lang";
+let currentLang = "en";
+
+function detectInitialLang() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && I18N[stored]) return stored;
+  } catch (_) { /* localStorage may be blocked */ }
+  const nav = (navigator.language || "en").toLowerCase();
+  const base = nav.split("-")[0];
+  if (I18N[base]) return base;
+  for (const l of LANGS) if (nav.startsWith(l.code)) return l.code;
+  return "en";
+}
+
+function t(key, ...args) {
+  let s = (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key;
+  for (let i = 0; i < args.length; i++) {
+    s = s.split("{" + i + "}").join(args[i]);
+  }
+  return s;
+}
+
+function localeForIntl() {
+  // Map our language code to a BCP-47 locale for date/time formatting.
+  switch (currentLang) {
+    case "en": return "en-US";
+    case "es": return "es-ES";
+    case "fr": return "fr-FR";
+    case "de": return "de-DE";
+    case "pt": return "pt-BR";
+    case "it": return "it-IT";
+    case "ja": return "ja-JP";
+    case "zh": return "zh-CN";
+    case "ko": return "ko-KR";
+    case "ar": return "ar-SA";
+    default:   return "en-US";
+  }
+}
+
+function applyI18nStatic() {
+  for (const el of document.querySelectorAll("[data-i18n]")) {
+    const key = el.getAttribute("data-i18n");
+    const html = el.hasAttribute("data-i18n-html");
+    const val = t(key);
+    if (html) el.innerHTML = val; else el.textContent = val;
+  }
+  // Placeholder on the search input.
+  const ci = document.getElementById("cityInput");
+  if (ci) ci.placeholder = t("search.placeholder");
+  // HTML lang / dir for accessibility and RTL.
+  document.documentElement.setAttribute("lang", currentLang);
+  document.documentElement.setAttribute("dir", RTL_LANGS.has(currentLang) ? "rtl" : "ltr");
+  document.title = t("app.title") + " — " + (currentLang === "en"
+      ? "when to step outside"
+      : t("top.label").toLowerCase());
+}
+
+function setLanguage(code) {
+  if (!I18N[code]) code = "en";
+  currentLang = code;
+  try { localStorage.setItem(STORAGE_KEY, code); } catch (_) {}
+  applyI18nStatic();
+  // Re-render dynamic content if present.
+  if (lastState.events) {
+    renderPlace(lastState.placeLabel);
+    renderTopPick(lastState.events);
+    renderGrid(lastState.events);
+  }
+  // Refresh the default status message if we're at the idle prompt.
+  if ($("status").textContent === "" || $("status").dataset.i18nKey === "status.start") {
+    setStatus(t("status.start"));
+    $("status").dataset.i18nKey = "status.start";
+  }
+}
+
+// ============================================================================
+// Scoring
+// ============================================================================
+
 function bell(value, peak, sigma) {
   const d = value - peak;
   return 100 * Math.exp(-(d * d) / (2 * sigma * sigma));
 }
 
 function lowCloudScore(low) {
-  // Best: 0%. Penalty grows past ~25%, near-zero by 70%.
   if (low <= 20) return 100;
-  if (low <= 50) return 100 - ((low - 20) / 30) * 70; // 100 -> 30
-  if (low <= 100) return Math.max(0, 30 - ((low - 50) / 50) * 30); // 30 -> 0
+  if (low <= 50) return 100 - ((low - 20) / 30) * 70;
+  if (low <= 100) return Math.max(0, 30 - ((low - 50) / 50) * 30);
   return 0;
 }
 
-function midCloudScore(mid) {
-  // Bell centered at 45%, sigma 25.
-  return bell(mid, 45, 25);
-}
-
-function highCloudScore(high) {
-  // Bell centered at 50%, sigma 30 (slightly more forgiving).
-  return bell(high, 50, 30);
-}
+function midCloudScore(mid)  { return bell(mid,  45, 25); }
+function highCloudScore(hi)  { return bell(hi,   50, 30); }
 
 function humidityScore(rh) {
   if (rh <= 40) return 100;
-  if (rh <= 80) return 100 - ((rh - 40) / 40) * 60; // 100 -> 40
-  return Math.max(0, 40 - ((rh - 80) / 20) * 40);   // 40 -> 0
+  if (rh <= 80) return 100 - ((rh - 40) / 40) * 60;
+  return Math.max(0, 40 - ((rh - 80) / 20) * 40);
 }
 
 function visibilityScore(visMeters) {
   const km = visMeters / 1000;
-  if (km <= 5)  return (km / 5) * 30;            // 0 -> 30
-  if (km <= 15) return 30 + ((km - 5) / 10) * 50; // 30 -> 80
-  if (km <= 24) return 80 + ((km - 15) / 9) * 20; // 80 -> 100
+  if (km <= 5)  return (km / 5) * 30;
+  if (km <= 15) return 30 + ((km - 5) / 10) * 50;
+  if (km <= 24) return 80 + ((km - 15) / 9) * 20;
   return 100;
 }
 
 function combinedScore(parts) {
   const w = { mid: 0.30, high: 0.25, low: 0.20, hum: 0.15, vis: 0.10 };
   return Math.round(
-    parts.mid  * w.mid  +
-    parts.high * w.high +
-    parts.low  * w.low  +
-    parts.hum  * w.hum  +
-    parts.vis  * w.vis
+    parts.mid * w.mid + parts.high * w.high + parts.low * w.low +
+    parts.hum * w.hum + parts.vis * w.vis
   );
 }
 
 function qualityLabel(score){
-  if (score >= 80) return { tag: "Spectacular", cls: "q-spec" };
-  if (score >= 65) return { tag: "Vibrant",     cls: "q-vib"  };
-  if (score >= 50) return { tag: "Pleasant",    cls: "q-ple"  };
-  if (score >= 35) return { tag: "Mediocre",    cls: "q-med"  };
-  return            { tag: "Drab",        cls: "q-drab" };
+  if (score >= 80) return { key: "quality.spectacular", cls: "q-spec" };
+  if (score >= 65) return { key: "quality.vibrant",     cls: "q-vib"  };
+  if (score >= 50) return { key: "quality.pleasant",    cls: "q-ple"  };
+  if (score >= 35) return { key: "quality.mediocre",    cls: "q-med"  };
+  return            { key: "quality.drab",        cls: "q-drab" };
 }
 
-// --- Time helpers ----------------------------------------------------------
+// ============================================================================
+// Time helpers
+// ============================================================================
 
-// Open-Meteo returns local-time ISO strings like "2026-04-23T19:42" (no zone).
-// We treat them as the location's local clock time; we don't need to convert
-// to UTC because we only use them for display and for matching the hourly
-// arrays which are also in the same local time.
-function parseLocalISO(s) {
-  // Parse as if local; we just need a Date for formatting & arithmetic.
-  return new Date(s);
-}
-
+function parseLocalISO(s) { return new Date(s); }
 function formatTime(date) {
-  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleTimeString(localeForIntl(), { hour: 'numeric', minute: '2-digit' });
 }
-
 function formatDay(date) {
-  return date.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(localeForIntl(), { weekday: 'long', month: 'short', day: 'numeric' });
 }
-
 function shortDay(date) {
-  return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(localeForIntl(), { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-// Return the index in `hourlyTimes` (array of "YYYY-MM-DDTHH:00" strings)
-// nearest to `targetISO`. Falls back to -1 if not found.
 function nearestHourIndex(hourlyTimes, targetISO) {
   const targetMs = parseLocalISO(targetISO).getTime();
   let bestIdx = -1, bestDiff = Infinity;
@@ -271,23 +805,20 @@ function nearestHourIndex(hourlyTimes, targetISO) {
   return bestIdx;
 }
 
-// --- Data fetching ---------------------------------------------------------
+// ============================================================================
+// Data fetching
+// ============================================================================
 
 async function geocode(query) {
   const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
   url.searchParams.set("name", query);
   url.searchParams.set("count", "6");
-  url.searchParams.set("language", "en");
+  url.searchParams.set("language", currentLang);
   url.searchParams.set("format", "json");
   const res = await fetch(url);
   if (!res.ok) throw new Error("Geocoding failed: " + res.status);
   const data = await res.json();
   return data.results || [];
-}
-
-async function reverseGeocode(lat, lon) {
-  // Open-Meteo doesn't have reverse geocoding, but we can label coordinates.
-  return { name: `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`, country: "" };
 }
 
 async function fetchForecast(lat, lon) {
@@ -304,7 +835,9 @@ async function fetchForecast(lat, lon) {
   return res.json();
 }
 
-// --- Build prediction objects ---------------------------------------------
+// ============================================================================
+// Predictions
+// ============================================================================
 
 function buildPredictions(forecast) {
   const ht = forecast.hourly.time;
@@ -313,7 +846,6 @@ function buildPredictions(forecast) {
   const hi = forecast.hourly.cloud_cover_high;
   const rh = forecast.hourly.relative_humidity_2m;
   const vi = forecast.hourly.visibility;
-
   const out = [];
   const sr = forecast.daily.sunrise;
   const ss = forecast.daily.sunset;
@@ -337,9 +869,8 @@ function makeEvent(kind, iso, ht, lo, md, hi, rh, vi) {
     vis:  visibilityScore(visV ?? 15000),
   };
   const score = combinedScore(parts);
-  const dt = parseLocalISO(iso);
   return {
-    kind, iso, date: dt, score, parts,
+    kind, iso, date: parseLocalISO(iso), score, parts,
     raw: { low: lowV, mid: midV, high: highV, rh: rhV, vis: visV },
   };
 }
@@ -350,56 +881,55 @@ function eventWindow(dt) {
   return `${formatTime(a)} – ${formatTime(b)}`;
 }
 
-// --- Rendering -------------------------------------------------------------
+// ============================================================================
+// Rendering
+// ============================================================================
 
 const $ = (id) => document.getElementById(id);
+const lastState = { events: null, placeLabel: "" };
 
 function setStatus(msg, isErr=false) {
   const el = $("status");
   el.textContent = msg || "";
   el.className = "status" + (isErr ? " err" : "");
+  if (el.dataset.i18nKey) delete el.dataset.i18nKey;
 }
 
 function renderPlace(label) {
-  $("place").innerHTML = label ? `Forecast for <strong>${label}</strong>` : "";
+  lastState.placeLabel = label || "";
+  $("place").innerHTML = label ? t("place.forecast", label) : "";
 }
 
 function renderTopPick(events) {
-  // Only consider events from "now" onward (allow next 30 minutes of past).
   const cutoff = Date.now() - 30 * 60 * 1000;
   const future = events.filter(e => e.date.getTime() >= cutoff);
-  if (future.length === 0) {
-    $("topPick").classList.add("hide");
-    return;
-  }
+  if (future.length === 0) { $("topPick").classList.add("hide"); return; }
   const best = future.reduce((a, b) => (b.score > a.score ? b : a));
   const q = qualityLabel(best.score);
-  $("topWhen").textContent = `${best.kind === "sunset" ? "🌇 Sunset" : "🌅 Sunrise"} • ${formatDay(best.date)}`;
+  const head = best.kind === "sunset" ? t("top.sunset") : t("top.sunrise");
+  $("topWhen").textContent = `${head} • ${formatDay(best.date)}`;
   $("topScore").textContent = best.score;
-  $("topQuality").textContent = q.tag.toLowerCase();
-  $("topRange").textContent = `Step outside between ${eventWindow(best.date)} (peak at ${formatTime(best.date)}).`;
+  $("topQuality").textContent = t(q.key).toLowerCase();
+  $("topRange").textContent = t("top.range", eventWindow(best.date), formatTime(best.date));
   $("topPick").classList.remove("hide");
 }
 
 function renderGrid(events) {
   const grid = $("grid");
   grid.innerHTML = "";
-
-  // Group by date string.
   const byDay = new Map();
   for (const e of events) {
     const key = e.date.toDateString();
     if (!byDay.has(key)) byDay.set(key, []);
     byDay.get(key).push(e);
   }
-
   for (const [, dayEvents] of byDay) {
     const card = document.createElement("div");
     card.className = "card";
     const dayLabel = shortDay(dayEvents[0].date);
     card.innerHTML = `
       <h3>${dayLabel}</h3>
-      <div class="day">Sunrise &amp; sunset color forecast</div>
+      <div class="day">${t("day.subtitle")}</div>
     `;
     for (const e of dayEvents) {
       const q = qualityLabel(e.score);
@@ -409,15 +939,15 @@ function renderGrid(events) {
         <div class="event">
           <div>
             <div class="time">${icon} ${formatTime(e.date)}</div>
-            <span class="quality-tag ${q.cls}">${q.tag}</span>
+            <span class="quality-tag ${q.cls}">${t(q.key)}</span>
           </div>
-          <div class="score" title="0–100 sky color score">${e.score}</div>
+          <div class="score" title="${t("score.title")}">${e.score}</div>
         </div>
         <div class="bar"><span style="width:${e.score}%"></span></div>
         <div class="meta">
-          <b>Window:</b> ${eventWindow(e.date)}<br/>
-          <b>Clouds:</b> low ${fmtPct(e.raw.low)} · mid ${fmtPct(e.raw.mid)} · high ${fmtPct(e.raw.high)}<br/>
-          <b>Humidity:</b> ${fmtPct(e.raw.rh)} · <b>Visibility:</b> ${fmtKm(e.raw.vis)}
+          <b>${t("meta.window")}:</b> ${eventWindow(e.date)}<br/>
+          <b>${t("meta.clouds")}:</b> ${t("meta.cloudLow")} ${fmtPct(e.raw.low)} · ${t("meta.cloudMid")} ${fmtPct(e.raw.mid)} · ${t("meta.cloudHigh")} ${fmtPct(e.raw.high)}<br/>
+          <b>${t("meta.humidity")}:</b> ${fmtPct(e.raw.rh)} · <b>${t("meta.visibility")}:</b> ${fmtKm(e.raw.vis)}
         </div>
       `;
       card.appendChild(div);
@@ -429,47 +959,58 @@ function renderGrid(events) {
 function fmtPct(v) { return v == null ? "–" : `${Math.round(v)}%`; }
 function fmtKm(m)  { return m == null ? "–" : `${(m/1000).toFixed(1)} km`; }
 
-// --- Flow ------------------------------------------------------------------
+// ============================================================================
+// Flow
+// ============================================================================
 
 async function runForCoords(lat, lon, label) {
   try {
-    setStatus("Fetching forecast…");
+    setStatus(t("status.fetching"));
     renderPlace(label);
     const fc = await fetchForecast(lat, lon);
     const events = buildPredictions(fc);
+    lastState.events = events;
     renderTopPick(events);
     renderGrid(events);
     setStatus("");
   } catch (e) {
     console.error(e);
-    setStatus("Couldn't load forecast. " + e.message, true);
+    setStatus(t("status.loadFail", e.message), true);
   }
 }
 
-// Geolocation
-$("geoBtn").addEventListener("click", () => {
-  if (!navigator.geolocation) {
-    setStatus("Geolocation is not available in this browser.", true);
-    return;
+// ---- Language dropdown ----
+(function buildLangSelect() {
+  const sel = $("langSelect");
+  for (const l of LANGS) {
+    const opt = document.createElement("option");
+    opt.value = l.code;
+    opt.textContent = l.label;
+    sel.appendChild(opt);
   }
-  setStatus("Asking your browser for location…");
+  sel.addEventListener("change", () => setLanguage(sel.value));
+})();
+
+// ---- Geolocation ----
+$("geoBtn").addEventListener("click", () => {
+  if (!navigator.geolocation) { setStatus(t("status.noGeo"), true); return; }
+  setStatus(t("status.askLocation"));
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const { latitude, longitude } = pos.coords;
-      runForCoords(latitude, longitude, `your location (${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°)`);
+      const lat = latitude.toFixed(2) + "°";
+      const lon = longitude.toFixed(2) + "°";
+      runForCoords(latitude, longitude, t("place.yourLocation", lat, lon));
     },
-    (err) => {
-      setStatus("Location denied or unavailable. Try searching for a city instead.", true);
-    },
+    () => { setStatus(t("status.denied"), true); },
     { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
   );
 });
 
-// Search
+// ---- Search ----
 const cityInput = $("cityInput");
 const suggest   = $("suggestList");
 let suggestTimer = 0;
-let lastResults  = [];
 
 cityInput.addEventListener("input", () => {
   const q = cityInput.value.trim();
@@ -478,10 +1019,7 @@ cityInput.addEventListener("input", () => {
   suggestTimer = setTimeout(async () => {
     try {
       const results = await geocode(q);
-      lastResults = results;
-      if (!results.length) {
-        suggest.classList.add("hide"); return;
-      }
+      if (!results.length) { suggest.classList.add("hide"); return; }
       suggest.innerHTML = "";
       for (const r of results) {
         const li = document.createElement("li");
@@ -494,7 +1032,7 @@ cityInput.addEventListener("input", () => {
         suggest.appendChild(li);
       }
       suggest.classList.remove("hide");
-    } catch (e) {
+    } catch (_) {
       suggest.classList.add("hide");
     }
   }, 220);
@@ -506,17 +1044,17 @@ document.addEventListener("click", (e) => {
 
 $("searchBtn").addEventListener("click", async () => {
   const q = cityInput.value.trim();
-  if (!q) { setStatus("Type a city or use your location.", true); return; }
+  if (!q) { setStatus(t("status.typeCity"), true); return; }
   try {
-    setStatus("Looking up city…");
+    setStatus(t("status.lookup"));
     const results = await geocode(q);
-    if (!results.length) { setStatus("No matches for " + q, true); return; }
+    if (!results.length) { setStatus(t("status.noMatch", q), true); return; }
     const r = results[0];
     const label = [r.name, r.admin1, r.country].filter(Boolean).join(", ");
     cityInput.value = label;
     runForCoords(r.latitude, r.longitude, label);
   } catch (e) {
-    setStatus("Search failed: " + e.message, true);
+    setStatus(t("status.searchFail", e.message), true);
   }
 });
 
@@ -524,8 +1062,15 @@ cityInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); $("searchBtn").click(); }
 });
 
-// First-load nudge
-setStatus('Tap "Use my location" or search a city to get started.');
+// ============================================================================
+// Init
+// ============================================================================
+
+currentLang = detectInitialLang();
+$("langSelect").value = currentLang;
+applyI18nStatic();
+setStatus(t("status.start"));
+$("status").dataset.i18nKey = "status.start";
 </script>
 </body>
 </html>
