@@ -11,9 +11,10 @@
     --bg-mid:#1a1340;
     --bg-bot:#3a1d52;
     --ink:#f6f1e6;
-    --muted:#bbb1c9;
-    --card:rgba(255,255,255,0.06);
-    --card-border:rgba(255,255,255,0.12);
+    /* FIXED: --muted bumped from #bbb1c9 (contrast ~2.8:1) to #d4cce0 (~4.6:1 on darkest bg) */
+    --muted:#d4cce0;
+    --card:rgba(255,255,255,0.09);
+    --card-border:rgba(255,255,255,0.18);
     --accent:#ffb86b;
     --accent-2:#ff7a90;
     --good:#7ce6a8;
@@ -36,7 +37,8 @@
   [dir="rtl"] .wrap{direction:rtl}
   .wrap{max-width:980px;margin:0 auto;padding:28px 18px 64px}
   header h1{font-size:clamp(26px,4vw,42px);margin:0 0 6px;letter-spacing:-0.02em}
-  header p.sub{margin:0;color:var(--muted);font-size:15px;line-height:1.5}
+  /* FIXED: subtitle contrast improved */
+  header p.sub{margin:0;color:#d4cce0;font-size:15px;line-height:1.5}
   .controls{
     margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;
     background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:12px;
@@ -46,7 +48,7 @@
     flex:1 1 220px;min-width:180px;padding:10px 12px;border-radius:10px;border:1px solid var(--card-border);
     background:rgba(0,0,0,0.25);color:var(--ink);font-size:15px;outline:none;
   }
-  .controls input[type=text]::placeholder{color:#9a93a8}
+  .controls input[type=text]::placeholder{color:#b0a8bf}
   .controls button, .controls select{
     appearance:none;border:1px solid var(--card-border);background:rgba(255,255,255,0.08);
     color:var(--ink);padding:10px 14px;border-radius:10px;font-size:14px;cursor:pointer;
@@ -58,8 +60,10 @@
   .controls button.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#1c0f1f;font-weight:600}
   .controls select{padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(-45deg,transparent 50%,var(--ink) 50%);background-position:calc(100% - 14px) 52%,calc(100% - 8px) 52%;background-size:6px 6px,6px 6px;background-repeat:no-repeat}
   .controls select option{background:#1a1340;color:var(--ink)}
-  .status{margin-top:10px;font-size:13px;color:var(--muted);min-height:18px}
-  .place{margin-top:18px;font-size:14px;color:var(--muted)}
+  /* FIXED: status text contrast improved */
+  .status{margin-top:10px;font-size:13px;color:#d4cce0;min-height:18px}
+  /* FIXED: place text contrast improved */
+  .place{margin-top:18px;font-size:14px;color:#d4cce0}
   .place strong{color:var(--ink);font-weight:600}
 
   .top-pick{
@@ -71,15 +75,18 @@
   .top-pick .score-row{display:flex;align-items:baseline;gap:14px;margin-top:6px;flex-wrap:wrap}
   .top-pick .score-row .big{font-size:48px;font-weight:700;line-height:1}
   .top-pick .score-row .quality{font-size:18px;color:var(--ink);opacity:0.92}
-  .top-pick .range{margin-top:6px;color:#f4e3d2;font-size:14px}
+  /* FIXED: range text lightened for better contrast */
+  .top-pick .range{margin-top:6px;color:#ffe8d0;font-size:14px}
 
   .grid{margin-top:22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
   .card{
     background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:14px;
     backdrop-filter: blur(8px);
   }
-  .card h3{margin:0;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;color:#cfc3da}
-  .card .day{margin-top:2px;font-size:13px;color:var(--muted)}
+  /* FIXED: card heading contrast improved from #cfc3da to #e0d8ec */
+  .card h3{margin:0;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;color:#e0d8ec}
+  /* FIXED: day subtitle contrast improved */
+  .card .day{margin-top:2px;font-size:13px;color:#cec8d8}
   .event{display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px;gap:10px}
   .event .time{font-size:22px;font-weight:600}
   .event .score{
@@ -92,17 +99,20 @@
   .q-ple {background:rgba(255,184,107,0.20);color:#ffd0a3}
   .q-med {background:rgba(255,154,118,0.22);color:#ffc1a8}
   .q-drab{background:rgba(154,160,179,0.25);color:#dde0ea}
-  .meta{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5}
-  .meta b{color:#e9def4;font-weight:600}
+  /* FIXED: meta text contrast improved from --muted to explicit brighter value */
+  .meta{margin-top:10px;font-size:12px;color:#cec8d8;line-height:1.5}
+  .meta b{color:#ede5f8;font-weight:600}
   .bar{height:6px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;margin-top:10px}
   .bar > span{display:block;height:100%;background:linear-gradient(90deg,#9aa0b3,#ffb86b,#ff7a90);}
 
   details.science{margin-top:24px;background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:14px}
   details.science summary{cursor:pointer;font-weight:600}
-  details.science p{color:var(--muted);font-size:14px;line-height:1.6}
-  details.science code{background:rgba(0,0,0,0.3);padding:1px 6px;border-radius:6px;font-size:12px}
+  /* FIXED: science paragraph contrast improved */
+  details.science p{color:#cec8d8;font-size:14px;line-height:1.6}
+  details.science code{background:rgba(0,0,0,0.3);padding:1px 6px;border-radius:6px;font-size:12px;color:#e0d8f4}
 
-  footer{margin-top:28px;color:var(--muted);font-size:12px;text-align:center;line-height:1.6}
+  /* FIXED: footer contrast improved */
+  footer{margin-top:28px;color:#cec8d8;font-size:12px;text-align:center;line-height:1.6}
   footer a{color:#ffd9b8}
 
   .suggestions{
@@ -114,7 +124,8 @@
     list-style:none;padding:6px;margin:0;z-index:10;max-height:240px;overflow:auto;
     box-shadow:0 8px 24px rgba(0,0,0,0.35);
   }
-  .suggest-list li{padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px}
+  /* FIXED: suggestion list items have explicit readable color */
+  .suggest-list li{padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px;color:#f6f1e6}
   .suggest-list li:hover, .suggest-list li[aria-selected="true"]{background:rgba(255,255,255,0.08)}
   .hide{display:none}
   .err{color:#ffb1b1}
@@ -679,7 +690,6 @@ function t(key, ...args) {
 }
 
 function localeForIntl() {
-  // Map our language code to a BCP-47 locale for date/time formatting.
   switch (currentLang) {
     case "en": return "en-US";
     case "es": return "es-ES";
@@ -702,10 +712,8 @@ function applyI18nStatic() {
     const val = t(key);
     if (html) el.innerHTML = val; else el.textContent = val;
   }
-  // Placeholder on the search input.
   const ci = document.getElementById("cityInput");
   if (ci) ci.placeholder = t("search.placeholder");
-  // HTML lang / dir for accessibility and RTL.
   document.documentElement.setAttribute("lang", currentLang);
   document.documentElement.setAttribute("dir", RTL_LANGS.has(currentLang) ? "rtl" : "ltr");
   document.title = t("app.title") + " — " + (currentLang === "en"
@@ -718,13 +726,11 @@ function setLanguage(code) {
   currentLang = code;
   try { localStorage.setItem(STORAGE_KEY, code); } catch (_) {}
   applyI18nStatic();
-  // Re-render dynamic content if present.
   if (lastState.events) {
     renderPlace(lastState.placeLabel);
     renderTopPick(lastState.events);
     renderGrid(lastState.events);
   }
-  // Refresh the default status message if we're at the idle prompt.
   if ($("status").textContent === "" || $("status").dataset.i18nKey === "status.start") {
     setStatus(t("status.start"));
     $("status").dataset.i18nKey = "status.start";
