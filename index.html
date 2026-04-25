@@ -471,7 +471,7 @@ const I18N = {
     "science.p1": "Albe e tramonti intensi richiedono una <b>tela</b> di nuvole alte (cirri) e medie (altocumuli/altostrati) su cui rimbalzi la luce radente, ma anche un <b>orizzonte libero</b> verso il sole perché quella luce raggiunga le nuvole. Le nuvole basse vicine bloccano lo spettacolo.",
     "science.p2": "Per ogni alba/tramonto prendiamo la previsione oraria di Open‑Meteo (senza chiave) e uniamo questi segnali in un punteggio 0–100:",
     "science.bullets": "• <b>Nuvole medie</b> (peso 30%) — ideale 30–60%.<br/>• <b>Nuvole alte</b> (peso 25%) — ideale 30–70%.<br/>• <b>Nuvole basse</b> (peso 20%) — penalità oltre ~30%, meno è meglio.<br/>• <b>Umidità</b> al suolo (peso 15%) — meno umidità = colori più puliti.<br/>• <b>Visibilità</b> (peso 10%) — più alta = più vivace.",
-    "science.astro": "Gli orari di alba e tramonto arrivano dai campi astronomici giornalieri di Open‑Meteo, calcolati con l'algoritmo NOAA — precisi al minuto. La \"finestra migliore\" va circa da 25 min prima a 25 min dopo l'evento: ora dorata fino all'inizio dell'ora blu.",
+    "science.astro": "Gli orari di alba e tramonto arrivano dai campi astronomici giornalieri di Open‑Meteo, calculated con l'algoritmo NOAA — precisi al minuto. La \"finestra migliore\" va circa da 25 min prima a 25 min dopo l'evento: ora dorata fino all'inizio dell'ora blu.",
     "science.data": "Dati: <code>api.open-meteo.com</code> per il meteo, <code>geocoding-api.open-meteo.com</code> per le città. Entrambi gratuiti e CORS-enabled.",
     "footer.host": "Un unico file HTML statico — ospitalo gratis su GitHub Pages, Netlify o Cloudflare Pages.",
     "footer.credit": 'Meteo &amp; astronomia: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. Nessun tracciamento, nessun cookie.',
@@ -770,12 +770,14 @@ function visibilityScore(visMeters) {
   return 100;
 }
 
-function combinedScore(parts) {
+function combinedScoreRaw(parts) {
   const w = { mid: 0.30, high: 0.25, low: 0.20, hum: 0.15, vis: 0.10 };
-  return Math.round(
-    parts.mid * w.mid + parts.high * w.high + parts.low * w.low +
-    parts.hum * w.hum + parts.vis * w.vis
-  );
+  return parts.mid * w.mid + parts.high * w.high + parts.low * w.low +
+         parts.hum * w.hum + parts.vis * w.vis;
+}
+
+function combinedScore(parts) {
+  return Math.round(combinedScoreRaw(parts));
 }
 
 function qualityLabel(score){
@@ -801,14 +803,28 @@ function shortDay(date) {
   return date.toLocaleDateString(localeForIntl(), { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-function nearestHourIndex(hourlyTimes, targetISO) {
-  const targetMs = parseLocalISO(targetISO).getTime();
-  let bestIdx = -1, bestDiff = Infinity;
-  for (let i = 0; i < hourlyTimes.length; i++) {
-    const diff = Math.abs(parseLocalISO(hourlyTimes[i]).getTime() - targetMs);
-    if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
-  }
-  return bestIdx;
+// Finds the hourly bucket whose timestamp is at or before `targetMs`, and
+// returns the interpolation fraction toward the next bucket. Enables linear
+// interpolation of any hourly variable at an arbitrary instant.
+function interpIndex(htMs, targetMs) {
+  if (htMs.length === 0) return { i0: 0, i1: 0, f: 0 };
+  if (targetMs <= htMs[0]) return { i0: 0, i1: 0, f: 0 };
+  const last = htMs.length - 1;
+  if (targetMs >= htMs[last]) return { i0: last, i1: last, f: 0 };
+  let i0 = 0;
+  while (i0 < last && htMs[i0 + 1] <= targetMs) i0++;
+  const i1 = i0 + 1;
+  const f = (targetMs - htMs[i0]) / (htMs[i1] - htMs[i0]);
+  return { i0, i1, f };
+}
+
+function interpAt(arr, i0, i1, f) {
+  if (!arr) return null;
+  const v0 = arr[i0], v1 = arr[i1];
+  if (v0 == null && v1 == null) return null;
+  if (v0 == null) return v1;
+  if (v1 == null) return v0;
+  return v0 + (v1 - v0) * f;
 }
 
 // ============================================================================
@@ -845,8 +861,25 @@ async function fetchForecast(lat, lon) {
 // Predictions
 // ============================================================================
 
+// Sample offsets (minutes from event) spanning the ±25 min viewing window.
+// Scoring at multiple points inside the window and averaging removes the
+// hour-bucket-boundary artifact that made the single-hour snapshot flip-flop
+// with tiny forecast updates, while still reflecting genuine weather change
+// because both surrounding hourly samples feed every interpolation.
+const WINDOW_OFFSETS_MIN = [-25, -12.5, 0, 12.5, 25];
+// Triangular weights peaked at the event minute, ~3× edges. The peak minute
+// of the viewing experience matters more than ±25 min golden-hour edges.
+const WINDOW_WEIGHTS = [1, 2, 3, 2, 1];
+const WINDOW_WEIGHT_SUM = WINDOW_WEIGHTS.reduce((a, b) => a + b, 0);
+// Volatility coefficient: penalizes windows whose per-sample score jumps
+// around, suppressing "fake spike" wins where only one instant is vivid.
+// σ≈1 costs ~0.5 pt (negligible); a 40/45/70/96/68/44/39 spike with σ≈22
+// costs ~12 pts, enough to lose to a steady alternative.
+const VOLATILITY_K = 0.55;
+
 function buildPredictions(forecast) {
   const ht = forecast.hourly.time;
+  const htMs = ht.map(s => parseLocalISO(s).getTime());
   const lo = forecast.hourly.cloud_cover_low;
   const md = forecast.hourly.cloud_cover_mid;
   const hi = forecast.hourly.cloud_cover_high;
@@ -856,28 +889,75 @@ function buildPredictions(forecast) {
   const sr = forecast.daily.sunrise;
   const ss = forecast.daily.sunset;
   for (let i = 0; i < sr.length; i++) {
-    out.push(makeEvent("sunrise", sr[i], ht, lo, md, hi, rh, vi));
-    out.push(makeEvent("sunset",  ss[i], ht, lo, md, hi, rh, vi));
+    out.push(makeEvent("sunrise", sr[i], htMs, lo, md, hi, rh, vi));
+    out.push(makeEvent("sunset",  ss[i], htMs, lo, md, hi, rh, vi));
   }
   return out;
 }
 
-function makeEvent(kind, iso, ht, lo, md, hi, rh, vi) {
-  const idx = nearestHourIndex(ht, iso);
-  const safe = (a) => (idx >= 0 && a && a[idx] != null ? a[idx] : null);
-  const lowV = safe(lo), midV = safe(md), highV = safe(hi);
-  const rhV = safe(rh), visV = safe(vi);
+function makeEvent(kind, iso, htMs, lo, md, hi, rh, vi) {
+  const eventMs = parseLocalISO(iso).getTime();
+  const n = WINDOW_OFFSETS_MIN.length;
+  const sampleScores = new Array(n);
+  const partsSum = { low: 0, mid: 0, high: 0, hum: 0, vis: 0 };
+  const rawSum = { low: 0, mid: 0, high: 0, rh: 0, vis: 0 };
+  const rawCnt = { low: 0, mid: 0, high: 0, rh: 0, vis: 0 };
+  let weightedScoreSum = 0;
+  for (let k = 0; k < n; k++) {
+    const off = WINDOW_OFFSETS_MIN[k];
+    const w = WINDOW_WEIGHTS[k];
+    const { i0, i1, f } = interpIndex(htMs, eventMs + off * 60000);
+    const lowV  = interpAt(lo, i0, i1, f);
+    const midV  = interpAt(md, i0, i1, f);
+    const highV = interpAt(hi, i0, i1, f);
+    const rhV   = interpAt(rh, i0, i1, f);
+    const visV  = interpAt(vi, i0, i1, f);
+    const p = {
+      low:  lowCloudScore(lowV ?? 0),
+      mid:  midCloudScore(midV ?? 0),
+      high: highCloudScore(highV ?? 0),
+      hum:  humidityScore(rhV ?? 50),
+      vis:  visibilityScore(visV ?? 15000),
+    };
+    sampleScores[k] = combinedScoreRaw(p);
+    weightedScoreSum += sampleScores[k] * w;
+    partsSum.low  += p.low  * w;
+    partsSum.mid  += p.mid  * w;
+    partsSum.high += p.high * w;
+    partsSum.hum  += p.hum  * w;
+    partsSum.vis  += p.vis  * w;
+    if (lowV  != null) { rawSum.low  += lowV;  rawCnt.low++;  }
+    if (midV  != null) { rawSum.mid  += midV;  rawCnt.mid++;  }
+    if (highV != null) { rawSum.high += highV; rawCnt.high++; }
+    if (rhV   != null) { rawSum.rh   += rhV;   rawCnt.rh++;   }
+    if (visV  != null) { rawSum.vis  += visV;  rawCnt.vis++;  }
+  }
+  const weightedMean = weightedScoreSum / WINDOW_WEIGHT_SUM;
+  const mean = sampleScores.reduce((a, b) => a + b, 0) / n;
+  let varSum = 0;
+  for (const s of sampleScores) varSum += (s - mean) * (s - mean);
+  const volatility = Math.sqrt(varSum / n);
+  const finalScore = Math.round(
+    Math.max(0, Math.min(100, weightedMean - VOLATILITY_K * volatility))
+  );
   const parts = {
-    low:  lowCloudScore(lowV ?? 0),
-    mid:  midCloudScore(midV ?? 0),
-    high: highCloudScore(highV ?? 0),
-    hum:  humidityScore(rhV ?? 50),
-    vis:  visibilityScore(visV ?? 15000),
+    low:  partsSum.low  / WINDOW_WEIGHT_SUM,
+    mid:  partsSum.mid  / WINDOW_WEIGHT_SUM,
+    high: partsSum.high / WINDOW_WEIGHT_SUM,
+    hum:  partsSum.hum  / WINDOW_WEIGHT_SUM,
+    vis:  partsSum.vis  / WINDOW_WEIGHT_SUM,
   };
-  const score = combinedScore(parts);
+  const avg = (s, c) => (c > 0 ? s / c : null);
   return {
-    kind, iso, date: parseLocalISO(iso), score, parts,
-    raw: { low: lowV, mid: midV, high: highV, rh: rhV, vis: visV },
+    kind, iso, date: parseLocalISO(iso),
+    score: finalScore, parts,
+    raw: {
+      low:  avg(rawSum.low,  rawCnt.low),
+      mid:  avg(rawSum.mid,  rawCnt.mid),
+      high: avg(rawSum.high, rawCnt.high),
+      rh:   avg(rawSum.rh,   rawCnt.rh),
+      vis:  avg(rawSum.vis,  rawCnt.vis),
+    },
   };
 }
 
