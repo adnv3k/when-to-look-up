@@ -74,6 +74,7 @@
   .top-pick .when{font-size:clamp(20px,3vw,28px);margin:6px 0 0;font-weight:600}
   .top-pick .score-row{display:flex;align-items:baseline;gap:14px;margin-top:6px;flex-wrap:wrap}
   .top-pick .score-row .big{font-size:48px;font-weight:700;line-height:1}
+  .top-pick .score-row .of{font-size:20px;color:#ffd9b8;font-weight:600;margin-left:-8px}
   .top-pick .score-row .quality{font-size:18px;color:var(--ink);opacity:0.92}
   /* FIXED: range text lightened for better contrast */
   .top-pick .range{margin-top:6px;color:#ffe8d0;font-size:14px}
@@ -104,6 +105,14 @@
   .meta b{color:#ede5f8;font-weight:600}
   .bar{height:6px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;margin-top:10px}
   .bar > span{display:block;height:100%;background:linear-gradient(90deg,#9aa0b3,#ffb86b,#ff7a90);}
+  .diag{margin-top:8px;font-size:12px;color:#cec8d8;line-height:1.6}
+  .diag b{color:#ede5f8;font-weight:600}
+  .stability-tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;margin-left:2px;vertical-align:1px}
+  .s-high{background:rgba(124,230,168,0.18);color:#bcf2d3}
+  .s-med {background:rgba(255,210,119,0.20);color:#ffe4ae}
+  .s-low {background:rgba(255,154,118,0.22);color:#ffc1a8}
+  .top-pick .diag{margin-top:8px;color:#ffe8d0;font-size:13px}
+  .top-pick .diag b{color:var(--ink)}
 
   details.science{margin-top:24px;background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:14px}
   details.science summary{cursor:pointer;font-weight:600}
@@ -152,12 +161,14 @@
   <div id="place" class="place"></div>
 
   <section id="topPick" class="top-pick hide">
-    <div class="label" data-i18n="top.label">Best window in the next 5 days</div>
+    <div class="label" data-i18n="top.label">Best window in the next 3 days</div>
     <div class="when" id="topWhen"></div>
     <div class="score-row">
       <div class="big" id="topScore"></div>
+      <div class="of">/ 100</div>
       <div class="quality" id="topQuality"></div>
     </div>
+    <div class="diag" id="topDiag"></div>
     <div class="range" id="topRange"></div>
   </section>
 
@@ -166,8 +177,9 @@
   <details class="science">
     <summary data-i18n="science.summary">How the score is calculated</summary>
     <p data-i18n="science.p1" data-i18n-html="1"></p>
-    <p data-i18n="science.p2"></p>
+    <p data-i18n="science.p2" data-i18n-html="1"></p>
     <p data-i18n="science.bullets" data-i18n-html="1"></p>
+    <p data-i18n="science.stability" data-i18n-html="1"></p>
     <p data-i18n="science.astro"></p>
     <p data-i18n="science.data" data-i18n-html="1"></p>
   </details>
@@ -207,7 +219,7 @@ const I18N = {
     "search.placeholder": "Type a city (e.g., Reykjavík, Tokyo, Boise)…",
     "button.search": "Search",
     "button.location": "📍 Use my location",
-    "top.label": "Best window in the next 5 days",
+    "top.label": "Best window in the next 3 days",
     "top.sunset": "🌇 Sunset",
     "top.sunrise": "🌅 Sunrise",
     "top.range": "Step outside between {0} (peak at {1}).",
@@ -221,6 +233,11 @@ const I18N = {
     "meta.cloudHigh": "high",
     "meta.humidity": "Humidity",
     "meta.visibility": "Visibility",
+    "meta.colorPotential": "Color potential",
+    "meta.stability": "Confidence",
+    "stability.high": "high",
+    "stability.medium": "medium",
+    "stability.low": "low",
     "quality.spectacular": "Spectacular",
     "quality.vibrant": "Vibrant",
     "quality.pleasant": "Pleasant",
@@ -238,11 +255,12 @@ const I18N = {
     "status.loadFail": "Couldn't load forecast. {0}",
     "score.title": "0–100 sky color score",
     "science.summary": "How the score is calculated",
-    "science.p1": "Vivid sunrises and sunsets need a <b>canvas</b> of high (cirrus) and mid-level (altocumulus / altostratus) clouds for the low-angle sunlight to bounce off, but a <b>clear horizon</b> in the direction of the sun so the light can actually reach those clouds. Low clouds near the observer block the show.",
-    "science.p2": "For each sunrise/sunset, we pull the hourly forecast from Open-Meteo (no API key) and combine these signals into a 0–100 score:",
-    "science.bullets": "• <b>Mid-level cloud cover</b> (weight 30%) — best around 30–60%.<br/>• <b>High cloud cover</b> (weight 25%) — best around 30–70%.<br/>• <b>Low cloud cover</b> (weight 20%) — penalty above ~30%, the lower the better.<br/>• <b>Humidity</b> at surface (weight 15%) — lower humidity = cleaner colors.<br/>• <b>Visibility</b> (weight 10%) — higher = more vivid.",
-    "science.astro": "Sunrise/sunset times come straight from Open-Meteo's daily astronomy fields, which are computed from the standard NOAA solar position algorithm — so the timing itself is astronomical and accurate to the minute. The \"best window\" is roughly sunset − 25 min through sunset + 25 min (and the symmetric span around sunrise) — that covers golden hour through early blue hour.",
-    "science.data": "Data: <code>api.open-meteo.com</code> for weather, <code>geocoding-api.open-meteo.com</code> for city search. Both are free and CORS-enabled.",
+    "science.p1": "Vivid sunrises and sunsets need two things at once: a <b>canvas</b> of mid- and high-altitude clouds for low-angle sunlight to bounce off, and a <b>clear horizon</b> in the direction of the sun so the light can actually reach the canvas. Low clouds near you block the show; humidity and haze wash the colors out.",
+    "science.p2": "Each event gets a <b>score from 0 to 100 — higher is more vivid</b>. It's a weighted blend of five signals:",
+    "science.bullets": "• <b>Mid-level cloud cover</b> (weight 30%) — best around 30–60%.<br/>• <b>High cloud cover</b> (weight 25%) — best around 30–70%.<br/>• <b>Low cloud cover</b> (weight 20%) — penalty above ~30%, the lower the better.<br/>• <b>Humidity</b> at surface (weight 15%) — lower humidity = cleaner colors.<br/>• <b>Visibility</b> (weight 10%) — higher = more vivid.<br/><br/>Quality bands: <b>80+</b> Spectacular, <b>65–79</b> Vibrant, <b>50–64</b> Pleasant, <b>35–49</b> Mediocre, <b>0–34</b> Drab.",
+    "science.stability": "Each card also shows <b>Color potential</b> — what the score would be if the forecast is right — and <b>Confidence</b> — how much a 31-member GFS ensemble forecast (31 perturbed model runs) agrees with itself for that window. When members disagree, the displayed score is pulled toward neutral so a fragile spike can't beat a steady, agreed-upon evening. The forecast horizon is 3 days because that's the range where the ensemble agrees enough for a glance to be reliable.",
+    "science.astro": "Sunrise and sunset times come from Open-Meteo's daily astronomy fields (NOAA solar position algorithm — accurate to the minute). The viewing window is ±25 minutes around the peak time, covering golden hour through early blue hour.",
+    "science.data": "Data: <code>api.open-meteo.com</code> + <code>ensemble-api.open-meteo.com</code> (deterministic + GFS ensemble forecasts), <code>geocoding-api.open-meteo.com</code> for city search. All free, no API key, CORS-enabled.",
     "footer.host": "Built as a single static HTML file — host it free on GitHub Pages, Netlify, or Cloudflare Pages.",
     "footer.credit": 'Weather &amp; astronomy: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. No tracking, no cookies.',
   },
@@ -253,7 +271,7 @@ const I18N = {
     "search.placeholder": "Escribe una ciudad (p. ej., Reikiavik, Tokio, Boise)…",
     "button.search": "Buscar",
     "button.location": "📍 Usar mi ubicación",
-    "top.label": "Mejor ventana en los próximos 5 días",
+    "top.label": "Mejor ventana en los próximos 3 días",
     "top.sunset": "🌇 Atardecer",
     "top.sunrise": "🌅 Amanecer",
     "top.range": "Sal entre las {0} (punto álgido a las {1}).",
@@ -267,6 +285,11 @@ const I18N = {
     "meta.cloudHigh": "altas",
     "meta.humidity": "Humedad",
     "meta.visibility": "Visibilidad",
+    "meta.colorPotential": "Potencial de color",
+    "meta.stability": "Confianza",
+    "stability.high": "alta",
+    "stability.medium": "media",
+    "stability.low": "baja",
     "quality.spectacular": "Espectacular",
     "quality.vibrant": "Vibrante",
     "quality.pleasant": "Agradable",
@@ -287,8 +310,9 @@ const I18N = {
     "science.p1": "Los amaneceres y atardeceres vívidos necesitan un <b>lienzo</b> de nubes altas (cirros) y medias (altocúmulos / altoestratos) donde rebotar la luz rasante, pero también un <b>horizonte despejado</b> en dirección al sol para que esa luz llegue a las nubes. Las nubes bajas cercanas bloquean el espectáculo.",
     "science.p2": "Para cada amanecer/atardecer, consultamos la previsión horaria de Open‑Meteo (sin clave API) y combinamos estas señales en una puntuación de 0 a 100:",
     "science.bullets": "• <b>Nubes medias</b> (peso 30%) — ideal entre 30–60%.<br/>• <b>Nubes altas</b> (peso 25%) — ideal entre 30–70%.<br/>• <b>Nubes bajas</b> (peso 20%) — penalización por encima de ~30%, cuanto menos mejor.<br/>• <b>Humedad</b> en superficie (peso 15%) — menos humedad = colores más limpios.<br/>• <b>Visibilidad</b> (peso 10%) — más = más vivo.",
+    "science.stability": "Las versiones anteriores promediaban una sola previsión determinística sobre la ventana de ±25 min — útil, pero seguía siendo inestable cuando se actualizaba la previsión. Ahora cada evento tiene dos cifras: <b>potencial de color</b> (la mediana del ensemble) indica cuán vívido podría ser el cielo, y <b>estabilidad</b> (de la dispersión del ensemble) cuánto coinciden los miembros. La puntuación principal mezcla ambos — cuando hay desacuerdo, se acerca a un valor neutro para que no planifiques en torno a un pico frágil. El horizonte es de 3 días, el régimen donde el ensemble coincide lo suficiente para que un vistazo sea fiable.",
     "science.astro": "Las horas de amanecer y atardecer provienen de los campos diarios de astronomía de Open‑Meteo, calculados con el algoritmo estándar de la NOAA — con precisión de minuto. La \"mejor ventana\" abarca aproximadamente desde 25 min antes hasta 25 min después del evento: la hora dorada hasta el inicio de la hora azul.",
-    "science.data": "Datos: <code>api.open-meteo.com</code> para el tiempo, <code>geocoding-api.open-meteo.com</code> para buscar ciudades. Ambos gratis y con CORS habilitado.",
+    "science.data": "Datos: <code>ensemble-api.open-meteo.com</code> para el tiempo, <code>geocoding-api.open-meteo.com</code> para buscar ciudades. Ambos gratis y con CORS habilitado.",
     "footer.host": "Un único archivo HTML estático — hospédalo gratis en GitHub Pages, Netlify o Cloudflare Pages.",
     "footer.credit": 'Tiempo y astronomía: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. Sin rastreo, sin cookies.',
   },
@@ -299,7 +323,7 @@ const I18N = {
     "search.placeholder": "Tapez une ville (p. ex. Reykjavík, Tokyo, Boise)…",
     "button.search": "Rechercher",
     "button.location": "📍 Utiliser ma position",
-    "top.label": "Meilleur créneau des 5 prochains jours",
+    "top.label": "Meilleur créneau des 3 prochains jours",
     "top.sunset": "🌇 Coucher",
     "top.sunrise": "🌅 Lever",
     "top.range": "Sortez entre {0} (pic à {1}).",
@@ -313,6 +337,11 @@ const I18N = {
     "meta.cloudHigh": "hauts",
     "meta.humidity": "Humidité",
     "meta.visibility": "Visibilité",
+    "meta.colorPotential": "Potentiel de couleur",
+    "meta.stability": "Confiance",
+    "stability.high": "élevée",
+    "stability.medium": "moyenne",
+    "stability.low": "faible",
     "quality.spectacular": "Spectaculaire",
     "quality.vibrant": "Vif",
     "quality.pleasant": "Agréable",
@@ -333,8 +362,9 @@ const I18N = {
     "science.p1": "Des levers et couchers de soleil vifs exigent une <b>toile</b> de nuages hauts (cirrus) et moyens (altocumulus / altostratus) sur laquelle la lumière rasante se reflète, mais aussi un <b>horizon dégagé</b> en direction du soleil pour que la lumière atteigne ces nuages. Les nuages bas proches bloquent le spectacle.",
     "science.p2": "Pour chaque lever/coucher, nous récupérons les prévisions horaires d'Open‑Meteo (sans clé API) et combinons ces signaux en un score de 0 à 100 :",
     "science.bullets": "• <b>Nuages moyens</b> (poids 30%) — optimum entre 30–60%.<br/>• <b>Nuages hauts</b> (poids 25%) — optimum entre 30–70%.<br/>• <b>Nuages bas</b> (poids 20%) — pénalité au-dessus de ~30%, moins c'est mieux.<br/>• <b>Humidité</b> en surface (poids 15%) — moins d'humidité = couleurs plus nettes.<br/>• <b>Visibilité</b> (poids 10%) — plus élevée = plus vive.",
+    "science.stability": "Les versions précédentes moyennaient une prévision déterministe unique sur le créneau ±25 min — utile, mais toujours sujette aux à-coups quand la prévision se mettait à jour. Maintenant chaque événement a deux nombres : le <b>potentiel de couleur</b> (médiane de l'ensemble) indique à quel point le ciel pourrait être vif, et la <b>stabilité</b> (à partir de la dispersion de l'ensemble) l'accord entre les membres. Le score principal combine les deux — en cas de désaccord, il est ramené vers neutre pour éviter de planifier autour d'un pic fragile. L'horizon est de 3 jours — le régime où l'ensemble est assez cohérent pour qu'un coup d'œil soit fiable.",
     "science.astro": "Les heures du lever et du coucher viennent directement des champs d'astronomie quotidiens d'Open‑Meteo, calculés par l'algorithme standard de la NOAA — précis à la minute. La \"meilleure fenêtre\" couvre environ 25 min avant jusqu'à 25 min après l'événement : l'heure dorée jusqu'au début de l'heure bleue.",
-    "science.data": "Données : <code>api.open-meteo.com</code> pour la météo, <code>geocoding-api.open-meteo.com</code> pour la recherche de villes. Gratuits et compatibles CORS.",
+    "science.data": "Données : <code>ensemble-api.open-meteo.com</code> pour la météo, <code>geocoding-api.open-meteo.com</code> pour la recherche de villes. Gratuits et compatibles CORS.",
     "footer.host": "Un seul fichier HTML statique — hébergez-le gratuitement sur GitHub Pages, Netlify ou Cloudflare Pages.",
     "footer.credit": 'Météo &amp; astronomie : <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. Aucun suivi, aucun cookie.',
   },
@@ -345,7 +375,7 @@ const I18N = {
     "search.placeholder": "Stadt eingeben (z. B. Reykjavík, Tokio, Boise)…",
     "button.search": "Suchen",
     "button.location": "📍 Meinen Standort nutzen",
-    "top.label": "Bestes Zeitfenster in den nächsten 5 Tagen",
+    "top.label": "Bestes Zeitfenster in den nächsten 3 Tagen",
     "top.sunset": "🌇 Sonnenuntergang",
     "top.sunrise": "🌅 Sonnenaufgang",
     "top.range": "Geh zwischen {0} raus (Höhepunkt um {1}).",
@@ -359,6 +389,11 @@ const I18N = {
     "meta.cloudHigh": "hoch",
     "meta.humidity": "Luftfeuchte",
     "meta.visibility": "Sicht",
+    "meta.colorPotential": "Farbpotenzial",
+    "meta.stability": "Verlässlichkeit",
+    "stability.high": "hoch",
+    "stability.medium": "mittel",
+    "stability.low": "niedrig",
     "quality.spectacular": "Spektakulär",
     "quality.vibrant": "Leuchtend",
     "quality.pleasant": "Angenehm",
@@ -379,8 +414,9 @@ const I18N = {
     "science.p1": "Leuchtende Sonnenauf- und -untergänge brauchen eine <b>Leinwand</b> aus hohen (Zirrus) und mittelhohen (Altocumulus/Altostratus) Wolken, an denen das flache Sonnenlicht reflektiert wird — aber auch einen <b>klaren Horizont</b> in Sonnenrichtung, damit das Licht diese Wolken überhaupt erreicht. Niedrige Wolken in der Nähe verdecken die Show.",
     "science.p2": "Für jeden Auf-/Untergang holen wir die Stundenvorhersage von Open‑Meteo (ohne API-Schlüssel) und fassen diese Signale zu einem Score von 0–100 zusammen:",
     "science.bullets": "• <b>Mittelhohe Wolken</b> (Gewicht 30%) — optimal 30–60%.<br/>• <b>Hohe Wolken</b> (Gewicht 25%) — optimal 30–70%.<br/>• <b>Niedrige Wolken</b> (Gewicht 20%) — Abzug ab ~30%, weniger ist besser.<br/>• <b>Luftfeuchte</b> am Boden (Gewicht 15%) — trockener = klarere Farben.<br/>• <b>Sicht</b> (Gewicht 10%) — höher = intensiver.",
+    "science.stability": "Frühere Versionen mittelten eine einzelne deterministische Vorhersage über das ±25-Minuten-Fenster — hilfreich, aber bei Modell-Updates trotzdem wackelig. Jetzt hat jedes Ereignis zwei Zahlen: <b>Farbpotenzial</b> (Ensemble-Median) zeigt, wie lebendig der Himmel werden könnte, und <b>Stabilität</b> (aus der Ensemble-Streuung) zeigt, wie einig sich die Modelle sind. Der Hauptscore mischt beides — bei großer Streuung wird er Richtung neutral gezogen, damit du nicht auf eine fragile Spitze hin planst. Horizont 3 Tage — das Regime, in dem das Ensemble übereinstimmt genug, damit ein Blick belastbar ist.",
     "science.astro": "Die Zeiten stammen aus den täglichen Astronomie-Feldern von Open‑Meteo, berechnet nach dem Standard-NOAA-Sonnenpositions-Algorithmus — minutengenau. Das \"beste Fenster\" ist grob Ereignis − 25 min bis Ereignis + 25 min, also goldene Stunde bis zur blauen Stunde.",
-    "science.data": "Daten: <code>api.open-meteo.com</code> für Wetter, <code>geocoding-api.open-meteo.com</code> für Städtesuche. Beide kostenlos und CORS-fähig.",
+    "science.data": "Daten: <code>ensemble-api.open-meteo.com</code> für Wetter, <code>geocoding-api.open-meteo.com</code> für Städtesuche. Beide kostenlos und CORS-fähig.",
     "footer.host": "Eine einzige statische HTML-Datei — kostenlos hostbar auf GitHub Pages, Netlify oder Cloudflare Pages.",
     "footer.credit": 'Wetter &amp; Astronomie: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. Kein Tracking, keine Cookies.',
   },
@@ -391,7 +427,7 @@ const I18N = {
     "search.placeholder": "Digite uma cidade (ex.: Reiquiavique, Tóquio, Boise)…",
     "button.search": "Buscar",
     "button.location": "📍 Usar minha localização",
-    "top.label": "Melhor janela nos próximos 5 dias",
+    "top.label": "Melhor janela nos próximos 3 dias",
     "top.sunset": "🌇 Pôr do sol",
     "top.sunrise": "🌅 Nascer do sol",
     "top.range": "Saia entre {0} (auge às {1}).",
@@ -405,6 +441,11 @@ const I18N = {
     "meta.cloudHigh": "altas",
     "meta.humidity": "Umidade",
     "meta.visibility": "Visibilidade",
+    "meta.colorPotential": "Potencial de cor",
+    "meta.stability": "Confiança",
+    "stability.high": "alta",
+    "stability.medium": "média",
+    "stability.low": "baixa",
     "quality.spectacular": "Espetacular",
     "quality.vibrant": "Vibrante",
     "quality.pleasant": "Agradável",
@@ -425,8 +466,9 @@ const I18N = {
     "science.p1": "Nasceres e pores do sol vívidos precisam de uma <b>tela</b> de nuvens altas (cirros) e médias (altocúmulos/altostratos) para a luz rasante refletir, mas também de um <b>horizonte limpo</b> na direção do sol para que a luz chegue até essas nuvens. Nuvens baixas próximas bloqueiam o espetáculo.",
     "science.p2": "Para cada evento, puxamos a previsão horária do Open‑Meteo (sem chave) e combinamos estes sinais em uma nota de 0 a 100:",
     "science.bullets": "• <b>Nuvens médias</b> (peso 30%) — ideal 30–60%.<br/>• <b>Nuvens altas</b> (peso 25%) — ideal 30–70%.<br/>• <b>Nuvens baixas</b> (peso 20%) — penalidade acima de ~30%, menos é melhor.<br/>• <b>Umidade</b> à superfície (peso 15%) — menor umidade = cores mais limpas.<br/>• <b>Visibilidade</b> (peso 10%) — maior = mais vívida.",
+    "science.stability": "Versões anteriores faziam a média de uma única previsão determinística no intervalo de ±25 min — útil, mas ainda instável quando a previsão era atualizada. Agora cada evento tem dois números: <b>potencial de cor</b> (mediana do ensemble) indica quão vívido o céu pode ficar, e <b>estabilidade</b> (da dispersão do ensemble) mostra o quanto os membros concordam. A pontuação principal combina os dois — quando há discordância, ela é puxada para um valor neutro para você não planejar em torno de um pico frágil. O horizonte é de 3 dias — o regime onde o ensemble concorda o suficiente para que uma olhada seja confiável.",
     "science.astro": "Os horários vêm dos campos diários de astronomia do Open‑Meteo, calculados pelo algoritmo padrão da NOAA — precisos ao minuto. A \"melhor janela\" vai de cerca de 25 min antes até 25 min depois do evento: hora dourada até o início da hora azul.",
-    "science.data": "Dados: <code>api.open-meteo.com</code> para clima, <code>geocoding-api.open-meteo.com</code> para busca de cidades. Ambos gratuitos e com CORS.",
+    "science.data": "Dados: <code>ensemble-api.open-meteo.com</code> para clima, <code>geocoding-api.open-meteo.com</code> para busca de cidades. Ambos gratuitos e com CORS.",
     "footer.host": "Um único arquivo HTML estático — hospede grátis no GitHub Pages, Netlify ou Cloudflare Pages.",
     "footer.credit": 'Clima &amp; astronomia: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. Sem rastreamento, sem cookies.',
   },
@@ -437,7 +479,7 @@ const I18N = {
     "search.placeholder": "Scrivi una città (es. Reykjavík, Tokyo, Boise)…",
     "button.search": "Cerca",
     "button.location": "📍 Usa la mia posizione",
-    "top.label": "Miglior finestra nei prossimi 5 giorni",
+    "top.label": "Miglior finestra nei prossimi 3 giorni",
     "top.sunset": "🌇 Tramonto",
     "top.sunrise": "🌅 Alba",
     "top.range": "Esci tra le {0} (picco alle {1}).",
@@ -451,6 +493,11 @@ const I18N = {
     "meta.cloudHigh": "alte",
     "meta.humidity": "Umidità",
     "meta.visibility": "Visibilità",
+    "meta.colorPotential": "Potenziale di colore",
+    "meta.stability": "Affidabilità",
+    "stability.high": "alta",
+    "stability.medium": "media",
+    "stability.low": "bassa",
     "quality.spectacular": "Spettacolare",
     "quality.vibrant": "Vivace",
     "quality.pleasant": "Gradevole",
@@ -471,8 +518,9 @@ const I18N = {
     "science.p1": "Albe e tramonti intensi richiedono una <b>tela</b> di nuvole alte (cirri) e medie (altocumuli/altostrati) su cui rimbalzi la luce radente, ma anche un <b>orizzonte libero</b> verso il sole perché quella luce raggiunga le nuvole. Le nuvole basse vicine bloccano lo spettacolo.",
     "science.p2": "Per ogni alba/tramonto prendiamo la previsione oraria di Open‑Meteo (senza chiave) e uniamo questi segnali in un punteggio 0–100:",
     "science.bullets": "• <b>Nuvole medie</b> (peso 30%) — ideale 30–60%.<br/>• <b>Nuvole alte</b> (peso 25%) — ideale 30–70%.<br/>• <b>Nuvole basse</b> (peso 20%) — penalità oltre ~30%, meno è meglio.<br/>• <b>Umidità</b> al suolo (peso 15%) — meno umidità = colori più puliti.<br/>• <b>Visibilità</b> (peso 10%) — più alta = più vivace.",
+    "science.stability": "Le versioni precedenti mediavano una singola previsione deterministica sulla finestra di ±25 min — utile, ma comunque instabile quando la previsione si aggiornava. Ora ogni evento ha due numeri: <b>potenziale di colore</b> (mediana dell'ensemble) indica quanto potrebbe essere vivido il cielo, e <b>stabilità</b> (dalla dispersione dell'ensemble) quanto i membri concordano. Il punteggio principale combina i due — quando i membri divergono viene tirato verso un valore neutro per non far pianificare attorno a un picco fragile. L'orizzonte è di 3 giorni — il regime in cui l'ensemble è abbastanza concorde perché un'occhiata sia affidabile.",
     "science.astro": "Gli orari di alba e tramonto arrivano dai campi astronomici giornalieri di Open‑Meteo, calculated con l'algoritmo NOAA — precisi al minuto. La \"finestra migliore\" va circa da 25 min prima a 25 min dopo l'evento: ora dorata fino all'inizio dell'ora blu.",
-    "science.data": "Dati: <code>api.open-meteo.com</code> per il meteo, <code>geocoding-api.open-meteo.com</code> per le città. Entrambi gratuiti e CORS-enabled.",
+    "science.data": "Dati: <code>ensemble-api.open-meteo.com</code> per il meteo, <code>geocoding-api.open-meteo.com</code> per le città. Entrambi gratuiti e CORS-enabled.",
     "footer.host": "Un unico file HTML statico — ospitalo gratis su GitHub Pages, Netlify o Cloudflare Pages.",
     "footer.credit": 'Meteo &amp; astronomia: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. Nessun tracciamento, nessun cookie.',
   },
@@ -483,7 +531,7 @@ const I18N = {
     "search.placeholder": "都市を入力（例：レイキャビク、東京、ボイジー）…",
     "button.search": "検索",
     "button.location": "📍 現在地を使う",
-    "top.label": "今後5日間のベストな時間帯",
+    "top.label": "今後3日間のベストな時間帯",
     "top.sunset": "🌇 夕焼け",
     "top.sunrise": "🌅 朝焼け",
     "top.range": "{0} に外へ（ピーク: {1}）。",
@@ -497,6 +545,11 @@ const I18N = {
     "meta.cloudHigh": "上層",
     "meta.humidity": "湿度",
     "meta.visibility": "視程",
+    "meta.colorPotential": "色の潜在性",
+    "meta.stability": "信頼度",
+    "stability.high": "高",
+    "stability.medium": "中",
+    "stability.low": "低",
     "quality.spectacular": "絶景",
     "quality.vibrant": "鮮やか",
     "quality.pleasant": "良好",
@@ -517,8 +570,9 @@ const I18N = {
     "science.p1": "鮮やかな朝焼け・夕焼けには、低角度の光を反射させる高層雲（巻雲）と中層雲（高積雲／高層雲）の<b>キャンバス</b>が必要で、同時に太陽方向の<b>澄んだ地平線</b>がないと光がその雲に届きません。近くの下層雲はショーを遮ります。",
     "science.p2": "日の出・日の入りごとに、Open‑Meteoの毎時予報（APIキー不要）を取得し、以下の指標を統合して0〜100のスコアを算出します:",
     "science.bullets": "• <b>中層雲</b>（重み30%）— 30〜60%が最適。<br/>• <b>上層雲</b>（重み25%）— 30〜70%が最適。<br/>• <b>下層雲</b>（重み20%）— ~30%超でペナルティ、少ないほど良い。<br/>• <b>地表湿度</b>（重み15%）— 湿度が低いほど色がクリア。<br/>• <b>視程</b>（重み10%）— 高いほど鮮やか。",
+    "science.stability": "以前は単一の決定論的予報を±25分の時間帯にわたって平均していました — 役立ちますが、予報の更新で揺らぎが残りました。今では各イベントに2つの数値があります: <b>色の潜在性</b>（アンサンブル中央値）は空がどれほど鮮やかになり得るかを示し、<b>安定性</b>（アンサンブルの広がりから）はメンバー間の合意度を示します。メインスコアは両者を合成し、メンバーが食い違うときは中立に寄せて、もろいピークを当てに計画しないようにします。予測期間は3日 — アンサンブルが十分一致し、一目で信頼できる範囲です。",
     "science.astro": "日の出・日の入り時刻はOpen‑Meteoの日次天文フィールド由来で、NOAAの標準太陽位置アルゴリズムによる分単位の精度です。「ベストな時間帯」はおおむねイベントの25分前〜25分後で、ゴールデンアワーからブルーアワー初期までを含みます。",
-    "science.data": "データ: 気象は <code>api.open-meteo.com</code>、都市検索は <code>geocoding-api.open-meteo.com</code>。どちらも無料でCORS対応。",
+    "science.data": "データ: 気象は <code>ensemble-api.open-meteo.com</code>、都市検索は <code>geocoding-api.open-meteo.com</code>。どちらも無料でCORS対応。",
     "footer.host": "単一の静的HTMLファイル — GitHub Pages、Netlify、Cloudflare Pagesで無料ホスティング可能。",
     "footer.credit": '気象＆天文: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>。追跡なし、Cookieなし。',
   },
@@ -529,7 +583,7 @@ const I18N = {
     "search.placeholder": "输入城市（例如：雷克雅未克、东京、博伊西）…",
     "button.search": "搜索",
     "button.location": "📍 使用我的位置",
-    "top.label": "未来 5 天内的最佳时段",
+    "top.label": "未来 3 天内的最佳时段",
     "top.sunset": "🌇 日落",
     "top.sunrise": "🌅 日出",
     "top.range": "{0} 之间出门（峰值 {1}）。",
@@ -543,6 +597,11 @@ const I18N = {
     "meta.cloudHigh": "高云",
     "meta.humidity": "湿度",
     "meta.visibility": "能见度",
+    "meta.colorPotential": "色彩潜力",
+    "meta.stability": "可信度",
+    "stability.high": "高",
+    "stability.medium": "中",
+    "stability.low": "低",
     "quality.spectacular": "壮观",
     "quality.vibrant": "鲜艳",
     "quality.pleasant": "宜人",
@@ -563,8 +622,9 @@ const I18N = {
     "science.p1": "绚丽的日出和日落需要高层（卷云）和中层（高积云/高层云）云作为反射低角度阳光的<b>画布</b>，同时需要太阳方向的<b>清澈地平线</b>让光线抵达这些云。近处的低云会挡住整个表演。",
     "science.p2": "对于每次日出/日落，我们从 Open‑Meteo 拉取逐小时预报（无需 API 密钥），并将以下信号合成为 0–100 的分值：",
     "science.bullets": "• <b>中层云量</b>（权重 30%）— 30–60% 最佳。<br/>• <b>高层云量</b>（权重 25%）— 30–70% 最佳。<br/>• <b>低层云量</b>（权重 20%）— 超过 ~30% 扣分，越少越好。<br/>• <b>地表湿度</b>（权重 15%）— 湿度越低色彩越纯净。<br/>• <b>能见度</b>（权重 10%）— 越高越鲜艳。",
+    "science.stability": "之前的版本将单个确定性预报在 ±25 分钟时段上取平均——有帮助，但预报更新时仍会跳动。现在每个事件有两个数字：<b>色彩潜力</b>（集合中位数）表示天空可能有多鲜艳；<b>稳定性</b>（来自集合分散度）表示成员之间的一致程度。主分数把两者结合——成员不一致时会向中性收缩，避免你围绕一个脆弱的高点做计划。预报范围是 3 天——这是集合足够一致、瞄一眼就值得信赖的范围。",
     "science.astro": "日出/日落时刻直接来自 Open‑Meteo 的每日天文字段，由 NOAA 标准太阳位置算法计算，精确到分钟。\"最佳时段\"大约是事件前 25 分钟到事件后 25 分钟，涵盖黄金时段到蓝调时段的早期。",
-    "science.data": "数据源：天气 <code>api.open-meteo.com</code>，城市搜索 <code>geocoding-api.open-meteo.com</code>。均免费且支持 CORS。",
+    "science.data": "数据源：天气 <code>ensemble-api.open-meteo.com</code>，城市搜索 <code>geocoding-api.open-meteo.com</code>。均免费且支持 CORS。",
     "footer.host": "单一静态 HTML 文件 — 可免费托管于 GitHub Pages、Netlify 或 Cloudflare Pages。",
     "footer.credit": '气象与天文：<a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>。无追踪，无 Cookie。',
   },
@@ -575,7 +635,7 @@ const I18N = {
     "search.placeholder": "도시 입력 (예: 레이캬비크, 도쿄, 보이시)…",
     "button.search": "검색",
     "button.location": "📍 내 위치 사용",
-    "top.label": "앞으로 5일 중 최고의 시간대",
+    "top.label": "앞으로 3일 중 최고의 시간대",
     "top.sunset": "🌇 일몰",
     "top.sunrise": "🌅 일출",
     "top.range": "{0} 사이에 밖으로 (정점 {1}).",
@@ -589,6 +649,11 @@ const I18N = {
     "meta.cloudHigh": "상층",
     "meta.humidity": "습도",
     "meta.visibility": "시정",
+    "meta.colorPotential": "색채 잠재력",
+    "meta.stability": "신뢰도",
+    "stability.high": "높음",
+    "stability.medium": "중간",
+    "stability.low": "낮음",
     "quality.spectacular": "장관",
     "quality.vibrant": "선명",
     "quality.pleasant": "괜찮음",
@@ -609,8 +674,9 @@ const I18N = {
     "science.p1": "선명한 일출과 일몰에는 낮은 각도의 햇빛이 반사될 상층(권운)과 중층(고적운/고층운) 구름의 <b>캔버스</b>가 필요하지만, 그 빛이 그 구름에 닿으려면 태양 방향의 <b>맑은 수평선</b>도 필요합니다. 가까운 하층 구름은 쇼를 가립니다.",
     "science.p2": "각 일출/일몰에 대해 Open‑Meteo의 시간별 예보(API 키 불필요)를 가져와 다음 신호를 0–100 점으로 합산합니다:",
     "science.bullets": "• <b>중층 구름</b> (가중치 30%) — 30–60%가 최적.<br/>• <b>상층 구름</b> (가중치 25%) — 30–70%가 최적.<br/>• <b>하층 구름</b> (가중치 20%) — ~30% 초과 시 감점, 적을수록 좋음.<br/>• <b>지표 습도</b> (가중치 15%) — 낮을수록 색이 선명.<br/>• <b>시정</b> (가중치 10%) — 높을수록 생생함.",
+    "science.stability": "이전 버전은 단일 결정론적 예보를 ±25분 구간에 걸쳐 평균냈습니다 — 도움이 됐지만 예보가 갱신될 때마다 흔들렸습니다. 이제 각 이벤트에는 두 가지 숫자가 있습니다: <b>색채 잠재력</b>(앙상블 중앙값)은 하늘이 얼마나 화려할 수 있는지를, <b>안정성</b>(앙상블 분산에서)은 멤버들이 얼마나 일치하는지를 보여줍니다. 메인 점수는 두 가지를 결합 — 멤버들이 어긋나면 중립으로 당겨져, 깨지기 쉬운 정점을 두고 계획하지 않게 합니다. 예보 기간은 3일 — 앙상블이 충분히 일치해 한 눈에 신뢰할 수 있는 범위입니다.",
     "science.astro": "일출·일몰 시각은 Open‑Meteo의 일일 천문 필드에서 바로 가져오며, NOAA 표준 태양 위치 알고리즘으로 분 단위 정확도로 계산됩니다. \"최적 구간\"은 대략 이벤트 25분 전부터 25분 후까지로, 골든 아워부터 블루 아워 초입까지 포함합니다.",
-    "science.data": "데이터: 날씨는 <code>api.open-meteo.com</code>, 도시 검색은 <code>geocoding-api.open-meteo.com</code>. 둘 다 무료이며 CORS 지원.",
+    "science.data": "데이터: 날씨는 <code>ensemble-api.open-meteo.com</code>, 도시 검색은 <code>geocoding-api.open-meteo.com</code>. 둘 다 무료이며 CORS 지원.",
     "footer.host": "단일 정적 HTML 파일 — GitHub Pages, Netlify, Cloudflare Pages에서 무료로 호스팅.",
     "footer.credit": '날씨 및 천문: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. 추적 없음, 쿠키 없음.',
   },
@@ -621,7 +687,7 @@ const I18N = {
     "search.placeholder": "اكتب اسم مدينة (مثال: ريكيافيك، طوكيو، بويزي)…",
     "button.search": "بحث",
     "button.location": "📍 استخدم موقعي",
-    "top.label": "أفضل وقت في الأيام الخمسة القادمة",
+    "top.label": "أفضل وقت في الأيام الثلاثة القادمة",
     "top.sunset": "🌇 الغروب",
     "top.sunrise": "🌅 الشروق",
     "top.range": "اخرج بين {0} (الذروة {1}).",
@@ -635,6 +701,11 @@ const I18N = {
     "meta.cloudHigh": "عالية",
     "meta.humidity": "الرطوبة",
     "meta.visibility": "الرؤية",
+    "meta.colorPotential": "إمكانات اللون",
+    "meta.stability": "الموثوقية",
+    "stability.high": "عالٍ",
+    "stability.medium": "متوسط",
+    "stability.low": "منخفض",
     "quality.spectacular": "مذهل",
     "quality.vibrant": "زاهي",
     "quality.pleasant": "لطيف",
@@ -655,8 +726,9 @@ const I18N = {
     "science.p1": "تحتاج ألوان الشروق والغروب الزاهية إلى <b>لوحة</b> من الغيوم العالية (السمحاقية) والمتوسطة (ركامية/طبقية متوسطة) ينعكس عليها الضوء الأفقي، وكذلك إلى <b>أفق صافٍ</b> باتجاه الشمس حتى يصل الضوء إلى تلك الغيوم. الغيوم المنخفضة القريبة تحجب المشهد.",
     "science.p2": "لكل شروق/غروب نجلب التوقعات الساعية من Open‑Meteo (بدون مفتاح)، ونجمع هذه الإشارات في درجة من 0 إلى 100:",
     "science.bullets": "• <b>الغيوم المتوسطة</b> (وزن 30%) — الأفضل 30–60%.<br/>• <b>الغيوم العالية</b> (وزن 25%) — الأفضل 30–70%.<br/>• <b>الغيوم المنخفضة</b> (وزن 20%) — خصم فوق ~30%، كلما قلّت كان أفضل.<br/>• <b>الرطوبة</b> قرب السطح (وزن 15%) — الرطوبة الأقل = ألوان أنقى.<br/>• <b>الرؤية</b> (وزن 10%) — كلما زادت ازداد التوهج.",
+    "science.stability": "كانت النسخات السابقة تأخذ متوسط توقع واحد قطعي على نافذة ±25 دقيقة — مفيد، لكنه يبقى متذبذبًا عند تحديث التوقعات. الآن لكل حدث رقمان: <b>إمكانات اللون</b> (وسيط المجموعة) يخبرك بمدى احتمال زهو السماء، و<b>الاستقرار</b> (من تباين المجموعة) يخبرك بمدى توافق الأعضاء. تجمع الدرجة الرئيسية بينهما — عند اختلاف الأعضاء تُسحب نحو الحياد حتى لا تخطط على ذروة هشّة. الأفق 3 أيام — وهو المدى الذي يتفق فيه أعضاء المجموعة بما يكفي لجعل النظرة الأولى موثوقة.",
     "science.astro": "أوقات الشروق والغروب تأتي من الحقول الفلكية اليومية في Open‑Meteo، محسوبة بخوارزمية NOAA القياسية لموضع الشمس — بدقة دقيقة. \"أفضل نافذة\" تمتد تقريبًا من 25 دقيقة قبل الحدث إلى 25 دقيقة بعده، ما يشمل الساعة الذهبية وبداية الساعة الزرقاء.",
-    "science.data": "البيانات: <code>api.open-meteo.com</code> للطقس، <code>geocoding-api.open-meteo.com</code> للبحث عن المدن. كلاهما مجاني ويدعم CORS.",
+    "science.data": "البيانات: <code>ensemble-api.open-meteo.com</code> للطقس، <code>geocoding-api.open-meteo.com</code> للبحث عن المدن. كلاهما مجاني ويدعم CORS.",
     "footer.host": "ملف HTML ثابت واحد — استضفه مجانًا على GitHub Pages أو Netlify أو Cloudflare Pages.",
     "footer.credit": 'الطقس والفلك: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open‑Meteo</a>. لا تتبّع، لا ملفات تعريف ارتباط.',
   },
@@ -844,17 +916,36 @@ async function geocode(query) {
 }
 
 async function fetchForecast(lat, lon) {
-  const url = new URL("https://api.open-meteo.com/v1/forecast");
-  url.searchParams.set("latitude",  String(lat));
-  url.searchParams.set("longitude", String(lon));
-  url.searchParams.set("hourly",
+  // Two parallel calls. The deterministic forecast supplies layered low/mid/high
+  // cloud cover (the physics the score formula needs). The ensemble call exposes
+  // only total cloud cover across its members — Open-Meteo's ensemble products
+  // don't split layers — so it serves a different role: 31 perturbed views of
+  // the atmosphere whose disagreement is a real, physically grounded measure of
+  // forecast uncertainty. We score each ensemble member with a simpler proxy
+  // (total cloud + RH + visibility) and use the IQR across members as the
+  // confidence signal that shrinks the planning score toward neutral.
+  const detUrl = new URL("https://api.open-meteo.com/v1/forecast");
+  detUrl.searchParams.set("latitude",  String(lat));
+  detUrl.searchParams.set("longitude", String(lon));
+  detUrl.searchParams.set("hourly",
     "cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,visibility");
-  url.searchParams.set("daily", "sunrise,sunset");
-  url.searchParams.set("timezone", "auto");
-  url.searchParams.set("forecast_days", "5");
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Forecast failed: " + res.status);
-  return res.json();
+  detUrl.searchParams.set("daily", "sunrise,sunset");
+  detUrl.searchParams.set("timezone", "auto");
+  detUrl.searchParams.set("forecast_days", String(FORECAST_DAYS));
+
+  const ensUrl = new URL("https://ensemble-api.open-meteo.com/v1/ensemble");
+  ensUrl.searchParams.set("latitude",  String(lat));
+  ensUrl.searchParams.set("longitude", String(lon));
+  ensUrl.searchParams.set("hourly", "cloud_cover,relative_humidity_2m,visibility");
+  ensUrl.searchParams.set("models", ENSEMBLE_MODEL);
+  ensUrl.searchParams.set("timezone", "auto");
+  ensUrl.searchParams.set("forecast_days", String(FORECAST_DAYS));
+
+  const [detRes, ensRes] = await Promise.all([fetch(detUrl), fetch(ensUrl)]);
+  if (!detRes.ok) throw new Error("Forecast failed: " + detRes.status);
+  if (!ensRes.ok) throw new Error("Ensemble failed: " + ensRes.status);
+  const [deterministic, ensemble] = await Promise.all([detRes.json(), ensRes.json()]);
+  return { deterministic, ensemble };
 }
 
 // ============================================================================
@@ -877,26 +968,81 @@ const WINDOW_WEIGHT_SUM = WINDOW_WEIGHTS.reduce((a, b) => a + b, 0);
 // costs ~12 pts, enough to lose to a steady alternative.
 const VOLATILITY_K = 0.55;
 
-function buildPredictions(forecast) {
-  const ht = forecast.hourly.time;
-  const htMs = ht.map(s => parseLocalISO(s).getTime());
-  const lo = forecast.hourly.cloud_cover_low;
-  const md = forecast.hourly.cloud_cover_mid;
-  const hi = forecast.hourly.cloud_cover_high;
-  const rh = forecast.hourly.relative_humidity_2m;
-  const vi = forecast.hourly.visibility;
+// Ensemble forecasting constants. Open-Meteo's ensemble API returns N perturbed
+// model runs ("members") per variable. Scoring each member separately and using
+// the median + IQR turns forecast disagreement into a real, physically grounded
+// uncertainty signal — replacing both the prior single-deterministic flapping
+// problem and the need for any hardcoded lead-time decay curve.
+const ENSEMBLE_MODEL = "gfs_seamless"; // 31 members, global, free.
+const FORECAST_DAYS = 3; // GFS skill is solid through ~72 h; longer horizons
+                         // were the dominant source of unstable scores.
+const SPREAD_SHRINK_DEN = 30;  // IQR (in score points) at which we hit max
+                               // regression of the displayed score toward 50.
+const SPREAD_SHRINK_MAX = 0.5; // Max regression toward 50 (wide spread).
+const LOWER_BOUND_K = 0.5;     // Multiplier on IQR for the "at-least" estimate
+                               // used to rank events for the top pick.
+const TOP_PICK_DEADBAND = 5;   // Points the challenger must beat the
+                               // incumbent's lower bound by, to flip top pick.
+const STABILITY_HIGH = 0.85;
+const STABILITY_MED  = 0.70;
+
+// Discover ensemble members in the hourly response. Each base variable appears
+// as the unsuffixed control plus `<base>_member01` ... `_memberNN`. Returns an
+// array of per-member views. `bases` maps short keys (used internally) to the
+// API variable names we care about for this caller.
+function discoverMembers(hourly, bases) {
+  const baseKeys = Object.keys(bases);
+  const probe = bases[baseKeys[0]];
+  const suffixes = [""]; // control member is unsuffixed
+  const re = new RegExp("^" + probe + "_member(\\d+)$");
+  for (const k of Object.keys(hourly)) {
+    const m = re.exec(k);
+    if (m) suffixes.push("_member" + m[1]);
+  }
+  const members = [];
+  for (const sfx of suffixes) {
+    const m = {};
+    let ok = true;
+    for (const key of baseKeys) {
+      const arr = hourly[bases[key] + sfx];
+      if (!arr) { ok = false; break; }
+      m[key] = arr;
+    }
+    if (ok) members.push(m);
+  }
+  return members;
+}
+
+function buildPredictions({ deterministic, ensemble }) {
+  const detHt = deterministic.hourly.time.map(s => parseLocalISO(s).getTime());
+  const detMember = {
+    low:  deterministic.hourly.cloud_cover_low,
+    mid:  deterministic.hourly.cloud_cover_mid,
+    high: deterministic.hourly.cloud_cover_high,
+    rh:   deterministic.hourly.relative_humidity_2m,
+    vis:  deterministic.hourly.visibility,
+  };
+  const ensHt = ensemble.hourly.time.map(s => parseLocalISO(s).getTime());
+  const ensMembers = discoverMembers(ensemble.hourly, {
+    cloud: "cloud_cover",
+    rh:    "relative_humidity_2m",
+    vis:   "visibility",
+  });
   const out = [];
-  const sr = forecast.daily.sunrise;
-  const ss = forecast.daily.sunset;
+  const sr = deterministic.daily.sunrise;
+  const ss = deterministic.daily.sunset;
   for (let i = 0; i < sr.length; i++) {
-    out.push(makeEvent("sunrise", sr[i], htMs, lo, md, hi, rh, vi));
-    out.push(makeEvent("sunset",  ss[i], htMs, lo, md, hi, rh, vi));
+    out.push(makeEvent("sunrise", sr[i], detHt, detMember, ensHt, ensMembers));
+    out.push(makeEvent("sunset",  ss[i], detHt, detMember, ensHt, ensMembers));
   }
   return out;
 }
 
-function makeEvent(kind, iso, htMs, lo, md, hi, rh, vi) {
-  const eventMs = parseLocalISO(iso).getTime();
+// Run the existing windowed-scoring (5 offsets × triangular weights × volatility
+// penalty) on a single ensemble member. Behavior is identical to the prior
+// makeEvent inner loop — this is just lifted out so we can call it 31× per
+// event and aggregate across members below.
+function scoreOneMember(eventMs, htMs, m) {
   const n = WINDOW_OFFSETS_MIN.length;
   const sampleScores = new Array(n);
   const partsSum = { low: 0, mid: 0, high: 0, hum: 0, vis: 0 };
@@ -907,11 +1053,11 @@ function makeEvent(kind, iso, htMs, lo, md, hi, rh, vi) {
     const off = WINDOW_OFFSETS_MIN[k];
     const w = WINDOW_WEIGHTS[k];
     const { i0, i1, f } = interpIndex(htMs, eventMs + off * 60000);
-    const lowV  = interpAt(lo, i0, i1, f);
-    const midV  = interpAt(md, i0, i1, f);
-    const highV = interpAt(hi, i0, i1, f);
-    const rhV   = interpAt(rh, i0, i1, f);
-    const visV  = interpAt(vi, i0, i1, f);
+    const lowV  = interpAt(m.low,  i0, i1, f);
+    const midV  = interpAt(m.mid,  i0, i1, f);
+    const highV = interpAt(m.high, i0, i1, f);
+    const rhV   = interpAt(m.rh,   i0, i1, f);
+    const visV  = interpAt(m.vis,  i0, i1, f);
     const p = {
       low:  lowCloudScore(lowV ?? 0),
       mid:  midCloudScore(midV ?? 0),
@@ -937,9 +1083,7 @@ function makeEvent(kind, iso, htMs, lo, md, hi, rh, vi) {
   let varSum = 0;
   for (const s of sampleScores) varSum += (s - mean) * (s - mean);
   const volatility = Math.sqrt(varSum / n);
-  const finalScore = Math.round(
-    Math.max(0, Math.min(100, weightedMean - VOLATILITY_K * volatility))
-  );
+  const score = Math.max(0, Math.min(100, weightedMean - VOLATILITY_K * volatility));
   const parts = {
     low:  partsSum.low  / WINDOW_WEIGHT_SUM,
     mid:  partsSum.mid  / WINDOW_WEIGHT_SUM,
@@ -948,16 +1092,88 @@ function makeEvent(kind, iso, htMs, lo, md, hi, rh, vi) {
     vis:  partsSum.vis  / WINDOW_WEIGHT_SUM,
   };
   const avg = (s, c) => (c > 0 ? s / c : null);
+  const raw = {
+    low:  avg(rawSum.low,  rawCnt.low),
+    mid:  avg(rawSum.mid,  rawCnt.mid),
+    high: avg(rawSum.high, rawCnt.high),
+    rh:   avg(rawSum.rh,   rawCnt.rh),
+    vis:  avg(rawSum.vis,  rawCnt.vis),
+  };
+  return { score, parts, raw };
+}
+
+// Linear-interpolated quantile of a sorted ascending array.
+function quantile(sorted, q) {
+  if (sorted.length === 0) return 0;
+  if (sorted.length === 1) return sorted[0];
+  const idx = (sorted.length - 1) * q;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+// Bell-curve over total cloud cover, mirroring the layered "some clouds, not
+// too many" intuition — used only to give ensemble members something to
+// disagree about. Not the displayed score.
+function totalCloudScoreProxy(cc) { return bell(cc, 50, 25); }
+
+// Score a single ensemble member with the proxy formula. Same ±25 min window
+// + triangular weighting as the layered scoring, so the disagreement we
+// measure is at the "viewing experience" timescale, not raw hour buckets.
+function proxyScoreOneMember(eventMs, htMs, m) {
+  const n = WINDOW_OFFSETS_MIN.length;
+  let weightedScoreSum = 0;
+  for (let k = 0; k < n; k++) {
+    const off = WINDOW_OFFSETS_MIN[k];
+    const w   = WINDOW_WEIGHTS[k];
+    const { i0, i1, f } = interpIndex(htMs, eventMs + off * 60000);
+    const ccV  = interpAt(m.cloud, i0, i1, f);
+    const rhV  = interpAt(m.rh,    i0, i1, f);
+    const visV = interpAt(m.vis,   i0, i1, f);
+    const s = totalCloudScoreProxy(ccV ?? 50) * 0.60
+            + humidityScore(rhV ?? 50)        * 0.25
+            + visibilityScore(visV ?? 15000)  * 0.15;
+    weightedScoreSum += s * w;
+  }
+  return Math.max(0, Math.min(100, weightedScoreSum / WINDOW_WEIGHT_SUM));
+}
+
+function makeEvent(kind, iso, detHt, detMember, ensHt, ensMembers) {
+  const eventMs = parseLocalISO(iso).getTime();
+
+  // Color potential: the layered, physically grounded score from the
+  // deterministic forecast. Same math as before — the score formula and the
+  // ±25 min windowed averaging both unchanged.
+  const det = scoreOneMember(eventMs, detHt, detMember);
+  const colorPotential = Math.round(Math.max(0, Math.min(100, det.score)));
+
+  // Confidence: spread across ensemble members of a proxy score that uses
+  // total cloud cover (since ensemble products don't expose layered clouds).
+  // IQR is robust to outlier members — one weird run can't move it.
+  let iqr = 0;
+  if (ensMembers.length > 1) {
+    const proxy = ensMembers.map(m => proxyScoreOneMember(eventMs, ensHt, m));
+    const sorted = proxy.slice().sort((a, b) => a - b);
+    iqr = quantile(sorted, 0.75) - quantile(sorted, 0.25);
+  }
+  const confidence = 1 - Math.min(iqr / SPREAD_SHRINK_DEN, SPREAD_SHRINK_MAX);
+
+  // Planning score: shrink the color potential toward 50 by the confidence.
+  // Wide ensemble disagreement → display pulls toward neutral so the user
+  // doesn't plan around a fragile spike. Tight agreement → full strength.
+  const planningScore = Math.round(
+    Math.max(0, Math.min(100, 50 + (colorPotential - 50) * confidence))
+  );
+
   return {
     kind, iso, date: parseLocalISO(iso),
-    score: finalScore, parts,
-    raw: {
-      low:  avg(rawSum.low,  rawCnt.low),
-      mid:  avg(rawSum.mid,  rawCnt.mid),
-      high: avg(rawSum.high, rawCnt.high),
-      rh:   avg(rawSum.rh,   rawCnt.rh),
-      vis:  avg(rawSum.vis,  rawCnt.vis),
-    },
+    score: planningScore,
+    colorPotential,
+    confidence,
+    iqr,
+    parts: det.parts,
+    raw:   det.raw,
   };
 }
 
@@ -972,7 +1188,7 @@ function eventWindow(dt) {
 // ============================================================================
 
 const $ = (id) => document.getElementById(id);
-const lastState = { events: null, placeLabel: "" };
+const lastState = { events: null, placeLabel: "", topPickKey: null };
 
 function setStatus(msg, isErr=false) {
   const el = $("status");
@@ -986,17 +1202,39 @@ function renderPlace(label) {
   $("place").innerHTML = label ? t("place.forecast", label) : "";
 }
 
+function stabilityFor(confidence) {
+  if (confidence >= STABILITY_HIGH) return { key: "stability.high",   cls: "s-high" };
+  if (confidence >= STABILITY_MED)  return { key: "stability.medium", cls: "s-med"  };
+  return { key: "stability.low", cls: "s-low" };
+}
+
+function renderDiagnostics(e) {
+  const s = stabilityFor(e.confidence);
+  return `${t("meta.colorPotential")}: <b>${e.colorPotential}</b> · ${t("meta.stability")}: <span class="stability-tag ${s.cls}">${t(s.key)}</span>`;
+}
+
+function lowerBound(e) { return e.colorPotential - LOWER_BOUND_K * e.iqr; }
+
 function renderTopPick(events) {
   const cutoff = Date.now() - 30 * 60 * 1000;
   const future = events.filter(e => e.date.getTime() >= cutoff);
   if (future.length === 0) { $("topPick").classList.add("hide"); return; }
-  const best = future.reduce((a, b) => (b.score > a.score ? b : a));
+  const challenger = future.reduce((a, b) => (lowerBound(b) > lowerBound(a) ? b : a));
+  let best = challenger;
+  if (lastState.topPickKey) {
+    const incumbent = future.find(e => (e.kind + "|" + e.iso) === lastState.topPickKey);
+    if (incumbent && lowerBound(challenger) - lowerBound(incumbent) < TOP_PICK_DEADBAND) {
+      best = incumbent;
+    }
+  }
+  lastState.topPickKey = best.kind + "|" + best.iso;
   const q = qualityLabel(best.score);
   const head = best.kind === "sunset" ? t("top.sunset") : t("top.sunrise");
   $("topWhen").textContent = `${head} • ${formatDay(best.date)}`;
   $("topScore").textContent = best.score;
   $("topQuality").textContent = t(q.key).toLowerCase();
   $("topRange").textContent = t("top.range", eventWindow(best.date), formatTime(best.date));
+  $("topDiag").innerHTML = renderDiagnostics(best);
   $("topPick").classList.remove("hide");
 }
 
@@ -1030,6 +1268,7 @@ function renderGrid(events) {
           <div class="score" title="${t("score.title")}">${e.score}</div>
         </div>
         <div class="bar"><span style="width:${e.score}%"></span></div>
+        <div class="diag">${renderDiagnostics(e)}</div>
         <div class="meta">
           <b>${t("meta.window")}:</b> ${eventWindow(e.date)}<br/>
           <b>${t("meta.clouds")}:</b> ${t("meta.cloudLow")} ${fmtPct(e.raw.low)} · ${t("meta.cloudMid")} ${fmtPct(e.raw.mid)} · ${t("meta.cloudHigh")} ${fmtPct(e.raw.high)}<br/>
